@@ -84,16 +84,24 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Install maturin and pytest
-        run: pip install maturin pytest
+      - name: Create virtualenv and install tools
+        working-directory: tagotip-python
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install maturin pytest
 
       - name: Build and install
         working-directory: tagotip-python
-        run: maturin develop
+        run: |
+          source .venv/bin/activate
+          maturin develop
 
       - name: Test
         working-directory: tagotip-python
-        run: pytest tests/
+        run: |
+          source .venv/bin/activate
+          pytest tests/
 
   arduino:
     name: Arduino (C test)

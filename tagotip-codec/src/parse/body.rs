@@ -361,7 +361,7 @@ fn parse_hex_passthrough(data: &str, pos: usize) -> Result<PushBody<'_>, ParseEr
     if data.is_empty() {
         return Err(ParseError::new(ParseErrorKind::InvalidPassthrough, pos));
     }
-    if !data.len().is_multiple_of(2) {
+    if data.len() % 2 != 0 {
         return Err(ParseError::new(ParseErrorKind::InvalidPassthrough, pos));
     }
     for &b in data.as_bytes() {
