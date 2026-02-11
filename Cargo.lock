@@ -156,18 +156,18 @@ dependencies = [
 
 [[package]]
 name = "tagotip-codec"
-version = "0.1.0"
+version = "0.1.0-beta.1"
 
 [[package]]
 name = "tagotip-ffi"
-version = "0.1.0"
+version = "0.1.0-beta.1"
 dependencies = [
  "tagotip-codec",
 ]
 
 [[package]]
 name = "tagotip-python"
-version = "0.1.0"
+version = "0.1.0-beta.1"
 dependencies = [
  "pyo3",
  "tagotip-codec",
