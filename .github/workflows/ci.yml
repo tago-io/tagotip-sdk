@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
+
+jobs:
+  rust:
+    name: Rust (codec + ffi)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --exclude tagotip-python
+
+      - name: Test
+        run: cargo test --workspace --exclude tagotip-python
+
+  node:
+    name: Node.js
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        working-directory: tagotip-node
+        run: npm ci
+
+      - name: Build
+        working-directory: tagotip-node
+        run: npm run build
+
+      - name: Test
+        working-directory: tagotip-node
+        run: npm test
+
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Test
+        working-directory: tagotip-go
+        run: go test ./...
+
+  python:
+    name: Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install maturin and pytest
+        run: pip install maturin pytest
+
+      - name: Build and install
+        working-directory: tagotip-python
+        run: maturin develop
+
+      - name: Test
+        working-directory: tagotip-python
+        run: pytest tests/
+
+  arduino:
+    name: Arduino (C test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and run test
+        working-directory: tagotip-arduino
+        run: cc -o test_parse tests/test_parse.c -I src && ./test_parse

@@ -1,0 +1,5 @@
+tagotip-go
+*.so
+*.dylib
+*.dll
+*.a

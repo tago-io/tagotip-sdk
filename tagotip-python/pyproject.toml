@@ -1,0 +1,21 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "tagotip"
+version = "0.1.0"
+description = "TagoTiP protocol SDK for Python"
+license = "Apache-2.0"
+authors = [{ name = "TagoIO Inc." }]
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+module-name = "tagotip._tagotip_native"
+python-source = "src"

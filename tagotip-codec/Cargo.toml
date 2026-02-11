@@ -1,0 +1,22 @@
+[package]
+name = "tagotip-codec"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "no_std TagoTiP protocol codec (parser and builder)"
+readme = "README.md"
+keywords = ["iot", "protocol", "tagotip", "codec", "no-std"]
+categories = ["no-std", "network-programming", "parser-implementations", "embedded", "encoding"]
+
+[features]
+default = []
+std = []
+
+[dev-dependencies]
+
+[lints]
+workspace = true

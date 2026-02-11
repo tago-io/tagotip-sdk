@@ -1,0 +1,9 @@
+export const MAX_VARIABLES = 100;
+export const MAX_META_PAIRS = 32;
+export const MAX_VARNAME_LEN = 100;
+export const MAX_SERIAL_LEN = 100;
+export const MAX_GROUP_LEN = 100;
+export const MAX_META_KEY_LEN = 100;
+export const MAX_UNIT_LEN = 25;
+export const MAX_FRAME_SIZE = 16_384;
+export const AUTH_TOKEN_LEN = 34;

@@ -1,0 +1,18 @@
+[package]
+name = "tagotip-python"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+description = "PyO3 bindings for tagotip-codec"
+publish = false
+
+[lib]
+name = "_tagotip_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["extension-module"] }
+tagotip-codec = { path = "../tagotip-codec", features = ["std"] }
+
+[lints]
+workspace = true

@@ -1,0 +1,16 @@
+[package]
+name = "tagotip-ffi"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+description = "C ABI bridge for tagotip-codec"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "staticlib", "lib"]
+
+[dependencies]
+tagotip-codec = { path = "../tagotip-codec", features = ["std"] }
+
+[lints]
+workspace = true
