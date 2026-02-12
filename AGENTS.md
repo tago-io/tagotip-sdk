@@ -64,7 +64,7 @@ MAX_GROUP_LEN       = 100
 MAX_META_KEY_LEN    = 100
 MAX_UNIT_LEN        = 25
 MAX_FRAME_SIZE      = 16384
-AUTH_TOKEN_LEN      = 34
+AUTH_HASH_LEN       = 16
 ```
 
 ## Build & Test Commands

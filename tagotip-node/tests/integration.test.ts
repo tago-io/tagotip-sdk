@@ -14,7 +14,7 @@ import {
 } from "../src/index.ts";
 import type { UplinkFrame, AckFrame } from "../src/index.ts";
 
-const AUTH = "ate2bd319014b24e0a8aca9f00aea4c0d0";
+const AUTH = "4deedd7bab8817ec";
 
 // Helper: parse → build round-trip
 function roundtrip(input: string): void {
@@ -406,17 +406,17 @@ describe("parseUplink — error cases", () => {
     assert.throws(
       () =>
         parseUplink(
-          `PUSH|ate2bd319014b24e0a8aca9f00aea4c0d|sensor_01|[temp:=32]`
+          `PUSH|4deedd7bab8817e|sensor_01|[temp:=32]`
         ),
       TagotipError
     );
   });
 
-  it("rejects auth wrong prefix", () => {
+  it("rejects auth non-hex", () => {
     assert.throws(
       () =>
         parseUplink(
-          `PUSH|xxe2bd319014b24e0a8aca9f00aea4c0d0|sensor_01|[temp:=32]`
+          `PUSH|4deedd7bab8817gz|sensor_01|[temp:=32]`
         ),
       TagotipError
     );

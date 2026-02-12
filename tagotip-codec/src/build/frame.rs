@@ -335,3 +335,39 @@ fn write_pull_body(w: &mut FrameWriter<'_>, body: &PullBody<'_>) -> Result<(), B
     w.write_byte(b']')?;
     Ok(())
 }
+
+// ---------------------------------------------------------------------------
+// Standalone build functions
+// ---------------------------------------------------------------------------
+
+/// Build a PUSH body into a buffer. Returns the number of bytes written.
+pub fn build_push_body(body: &PushBody<'_>, buf: &mut [u8]) -> Result<usize, BuildError> {
+    let mut w = FrameWriter::new(buf);
+    write_push_body(&mut w, body)?;
+    Ok(w.written())
+}
+
+/// Build a PULL body into a buffer. Returns the number of bytes written.
+pub fn build_pull_body(body: &PullBody<'_>, buf: &mut [u8]) -> Result<usize, BuildError> {
+    let mut w = FrameWriter::new(buf);
+    write_pull_body(&mut w, body)?;
+    Ok(w.written())
+}
+
+/// Build a single variable into a buffer. Returns the number of bytes written.
+pub fn build_variable(
+    var: &Variable<'_>,
+    meta_pool: &[MetaPair<'_>],
+    buf: &mut [u8],
+) -> Result<usize, BuildError> {
+    let mut w = FrameWriter::new(buf);
+    w.write_variable(var, meta_pool)?;
+    Ok(w.written())
+}
+
+/// Build a metadata block (`{key=val,...}`) into a buffer. Returns the number of bytes written.
+pub fn build_metadata(pairs: &[MetaPair<'_>], buf: &mut [u8]) -> Result<usize, BuildError> {
+    let mut w = FrameWriter::new(buf);
+    w.write_metadata_pairs(pairs)?;
+    Ok(w.written())
+}

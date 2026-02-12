@@ -10,7 +10,7 @@ use tagotip_codec::escape::{escape_into, needs_unescape, unescape_into};
 use tagotip_codec::parse::{parse_ack, parse_headless, parse_uplink};
 use tagotip_codec::types::*;
 
-const AUTH: &str = "ate2bd319014b24e0a8aca9f00aea4c0d0";
+const AUTH: &str = "4deedd7bab8817ec";
 
 fn roundtrip(input: &str) {
     let parsed = parse_uplink(input).unwrap();
@@ -653,51 +653,41 @@ fn headless_roundtrip_passthrough() {
 }
 
 // =========================================================================
-// 1G. Auth Token
+// 1G. Auth Hash
 // =========================================================================
 
 #[test]
-fn auth_valid_34_chars() {
+fn auth_valid_16_chars() {
     let input = format!("PUSH|{AUTH}|sensor_01|[temp:=32]");
     assert!(parse_uplink(&input).is_ok());
 }
 
 #[test]
 fn auth_too_short_rejected() {
-    let short_auth = "ate2bd319014b24e0a8aca9f00aea4c0d"; // 33 chars
+    let short_auth = "4deedd7bab8817e"; // 15 chars
     let input = format!("PUSH|{short_auth}|sensor_01|[temp:=32]");
     assert_parse_err(&input, ParseErrorKind::InvalidAuth);
 }
 
 #[test]
 fn auth_too_long_rejected() {
-    let long_auth = "ate2bd319014b24e0a8aca9f00aea4c0d0a"; // 35 chars
+    let long_auth = "4deedd7bab8817ec0"; // 17 chars
     let input = format!("PUSH|{long_auth}|sensor_01|[temp:=32]");
     assert_parse_err(&input, ParseErrorKind::InvalidAuth);
 }
 
 #[test]
-fn auth_wrong_prefix_rejected() {
-    let bad_auth = "xxe2bd319014b24e0a8aca9f00aea4c0d0"; // starts with xx
-    let input = format!("PUSH|{bad_auth}|sensor_01|[temp:=32]");
-    assert_parse_err(&input, ParseErrorKind::InvalidAuth);
-}
-
-#[test]
 fn auth_non_hex_rejected() {
-    let bad_auth = "ate2bd319014b24e0a8aca9f00aea4c0gz"; // contains g, z
+    let bad_auth = "4deedd7bab8817gz"; // contains g, z
     let input = format!("PUSH|{bad_auth}|sensor_01|[temp:=32]");
     assert_parse_err(&input, ParseErrorKind::InvalidAuth);
 }
 
 #[test]
 fn auth_uppercase_hex_accepted() {
-    let upper_auth = "atE2BD319014B24E0A8ACA9F00AEA4C0D0";
+    let upper_auth = "4DEEDD7BAB8817EC";
     let input = format!("PUSH|{upper_auth}|sensor_01|[temp:=32]");
-    // Hex chars are case-insensitive per convention; verify behavior
     let result = parse_uplink(&input);
-    // Whether this is accepted or rejected depends on implementation
-    // The spec says "32 hex chars" — hex digits include A-F
     assert!(result.is_ok(), "uppercase hex should be accepted");
 }
 

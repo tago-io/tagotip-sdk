@@ -26,7 +26,7 @@ extern "C" {
 #define TAGOTIP_MAX_META_PAIRS   32
 #define TAGOTIP_MAX_TOTAL_META   512
 #define TAGOTIP_MAX_FRAME_SIZE   16384
-#define TAGOTIP_AUTH_TOKEN_LEN   34
+#define TAGOTIP_AUTH_HASH_LEN    16
 
 /* -----------------------------------------------------------------------
  * Error codes (return values)

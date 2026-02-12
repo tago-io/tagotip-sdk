@@ -17,3 +17,12 @@ pub mod parse;
 
 pub use error::{BuildError, ParseError, ParseErrorKind};
 pub use types::*;
+
+// Re-export granular parse functions
+pub use parse::{
+    ParsedVariable, extract_serial, parse_metadata, parse_method, parse_pull_body, parse_push_body,
+    parse_seq, parse_variable, validate_auth,
+};
+
+// Re-export granular build functions
+pub use build::{build_metadata, build_pull_body, build_push_body, build_variable};

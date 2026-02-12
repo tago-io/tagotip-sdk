@@ -11,7 +11,7 @@ pub enum ParseErrorKind {
     InvalidMethod,
     /// Malformed or missing sequence counter.
     InvalidSeq,
-    /// Auth token is missing, wrong length, or contains non-hex characters.
+    /// Auth hash is missing, wrong length, or contains non-hex characters.
     InvalidAuth,
     /// Serial number is missing or contains invalid characters.
     InvalidSerial,
@@ -59,7 +59,7 @@ impl fmt::Display for ParseError {
             ParseErrorKind::NulByte => "frame contains NUL byte",
             ParseErrorKind::InvalidMethod => "invalid method",
             ParseErrorKind::InvalidSeq => "invalid sequence counter",
-            ParseErrorKind::InvalidAuth => "invalid auth token",
+            ParseErrorKind::InvalidAuth => "invalid auth hash",
             ParseErrorKind::InvalidSerial => "invalid serial",
             ParseErrorKind::MissingBody => "missing body",
             ParseErrorKind::InvalidModifier => "invalid body modifier",

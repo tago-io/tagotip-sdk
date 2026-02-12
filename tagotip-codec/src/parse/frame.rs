@@ -1,4 +1,4 @@
-use crate::consts::{AUTH_TOKEN_LEN, MAX_UPLINK_FIELDS};
+use crate::consts::{AUTH_HASH_LEN, MAX_UPLINK_FIELDS};
 use crate::error::{ParseError, ParseErrorKind};
 use crate::inline_vec::InlineVec;
 use crate::types::Method;
@@ -59,15 +59,12 @@ pub fn parse_seq(s: &str, pos: usize) -> Result<u32, ParseError> {
     parse_u32(num_str).ok_or_else(|| ParseError::new(ParseErrorKind::InvalidSeq, pos))
 }
 
-/// Validate an auth token: "at" + 32 hex chars.
+/// Validate an auth hash: exactly 16 hex chars.
 pub fn validate_auth(s: &str, pos: usize) -> Result<(), ParseError> {
-    if s.len() != AUTH_TOKEN_LEN {
+    if s.len() != AUTH_HASH_LEN {
         return Err(ParseError::new(ParseErrorKind::InvalidAuth, pos));
     }
-    if !s.starts_with("at") {
-        return Err(ParseError::new(ParseErrorKind::InvalidAuth, pos));
-    }
-    for &b in &s.as_bytes()[2..] {
+    for &b in s.as_bytes() {
         if !b.is_ascii_hexdigit() {
             return Err(ParseError::new(ParseErrorKind::InvalidAuth, pos));
         }

@@ -1,4 +1,4 @@
-import { AUTH_TOKEN_LEN, MAX_FRAME_SIZE, MAX_VARIABLES, MAX_META_PAIRS } from "./consts.ts";
+import { AUTH_HASH_LEN, MAX_FRAME_SIZE, MAX_VARIABLES, MAX_META_PAIRS } from "./consts.ts";
 import { TagotipError, type ParseErrorKind } from "./error.ts";
 import {
   validateVarname,
@@ -94,9 +94,8 @@ function parseU32(s: string): number | null {
 }
 
 function validateAuth(s: string, pos: number): void {
-  if (s.length !== AUTH_TOKEN_LEN) fail("invalid_auth", pos);
-  if (s[0] !== "a" || s[1] !== "t") fail("invalid_auth", pos);
-  for (let i = 2; i < s.length; i++) {
+  if (s.length !== AUTH_HASH_LEN) fail("invalid_auth", pos);
+  for (let i = 0; i < s.length; i++) {
     const ch = s[i];
     if (
       !((ch >= "0" && ch <= "9") || (ch >= "a" && ch <= "f") || (ch >= "A" && ch <= "F"))

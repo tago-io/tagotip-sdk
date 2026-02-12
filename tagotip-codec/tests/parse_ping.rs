@@ -1,7 +1,7 @@
 use tagotip_codec::parse::parse_uplink;
 use tagotip_codec::types::*;
 
-const AUTH: &str = "ate2bd319014b24e0a8aca9f00aea4c0d0";
+const AUTH: &str = "4deedd7bab8817ec";
 
 #[test]
 fn ping_basic() {

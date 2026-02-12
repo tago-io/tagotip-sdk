@@ -26,7 +26,7 @@ describe("types", () => {
   it("should allow constructing an UplinkFrame object", () => {
     const frame: UplinkFrame = {
       method: Method.Push,
-      auth: "at0123456789abcdef0123456789abcdef",
+      auth: "0123456789abcdef",
       serial: "my-device",
       pushBody: {
         type: "structured",

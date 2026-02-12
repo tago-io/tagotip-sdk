@@ -22,8 +22,8 @@ pub const MAX_UNIT_LEN: usize = 25;
 /// Maximum plaintext frame size in bytes (excluding optional `\n` terminator).
 pub const MAX_FRAME_SIZE: usize = 16_384;
 
-/// Length of an authorization token (`at` + 32 hex chars).
-pub const AUTH_TOKEN_LEN: usize = 34;
+/// Length of an authorization hash (16 hex chars).
+pub const AUTH_HASH_LEN: usize = 16;
 
 /// Maximum fields after pipe-splitting an uplink frame (METHOD|!N|AUTH|SERIAL|BODY = 5).
 pub const MAX_UPLINK_FIELDS: usize = 8;
