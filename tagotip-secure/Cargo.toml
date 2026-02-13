@@ -1,0 +1,36 @@
+[package]
+name = "tagotip-secure"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+description = "TagoTiP/S crypto envelope — AEAD encryption for TagoTiP frames"
+keywords = ["iot", "protocol", "tagotip", "crypto", "aead"]
+categories = ["no-std", "cryptography", "network-programming", "embedded", "encoding"]
+readme = "README.md"
+
+[features]
+default = ["aes-128-ccm"]
+aes-128-ccm = ["dep:aes", "dep:ccm"]
+aes-128-gcm = ["dep:aes", "dep:aes-gcm"]
+aes-256-ccm = ["dep:aes", "dep:ccm"]
+aes-256-gcm = ["dep:aes", "dep:aes-gcm"]
+chacha20-poly1305 = ["dep:chacha20poly1305"]
+full = ["aes-128-ccm", "aes-128-gcm", "aes-256-ccm", "aes-256-gcm", "chacha20-poly1305"]
+std = ["tagotip-codec/std", "sha2/std"]
+
+[dependencies]
+tagotip-codec = { version = "0.1.0-beta.3", path = "../tagotip-codec" }
+sha2 = { version = "0.10", default-features = false }
+aes = { version = "0.8", default-features = false, optional = true }
+ccm = { version = "0.5", default-features = false, features = ["alloc"], optional = true }
+aes-gcm = { version = "0.10", default-features = false, features = ["alloc", "aes"], optional = true }
+chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"], optional = true }
+
+[dev-dependencies]
+
+[lints]
+workspace = true

@@ -78,6 +78,24 @@ python-test:
 arduino-test:
     cd tagotip-arduino && cc -o test_parse tests/test_parse.c -I src && ./test_parse
 
+# Build and run Arduino/C crypto test
+arduino-crypto-test:
+    cd tagotip-arduino && cc -std=c99 -Wall -Wextra -Werror -o test_crypto tests/test_crypto.c src/tagotips.c -I src && ./test_crypto
+
+# ─── Secure ─────────────────────────────────────────────────
+
+# Run tagotip-secure tests (default features = AES-128-CCM)
+crypto-test:
+    cargo test -p tagotip-secure
+
+# Run tagotip-secure tests with all cipher suites
+crypto-test-all:
+    cargo test -p tagotip-secure --all-features
+
+# Run clippy on tagotip-secure with all cipher suites
+crypto-clippy:
+    cargo clippy -p tagotip-secure --all-features -- -D warnings
+
 # ─── FFI ─────────────────────────────────────────────────────
 
 # Build the FFI shared/static library

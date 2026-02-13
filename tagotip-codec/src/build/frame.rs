@@ -262,6 +262,33 @@ pub fn build_ack(frame: &AckFrame<'_>, buf: &mut [u8]) -> Result<usize, BuildErr
     Ok(w.written())
 }
 
+/// Build an ACK inner frame for TagoTiP/S: `STATUS[|DETAIL]` (no `ACK|` prefix, no seq).
+/// Returns the number of bytes written.
+pub fn build_ack_inner(frame: &AckFrame<'_>, buf: &mut [u8]) -> Result<usize, BuildError> {
+    let mut w = FrameWriter::new(buf);
+
+    let status_str = match frame.status {
+        AckStatus::Ok => "OK",
+        AckStatus::Pong => "PONG",
+        AckStatus::Cmd => "CMD",
+        AckStatus::Err => "ERR",
+    };
+    w.write_str(status_str)?;
+
+    if let Some(ref detail) = frame.detail {
+        w.write_pipe()?;
+        match detail {
+            AckDetail::Count(count) => w.write_u32(*count)?,
+            AckDetail::Variables(vars) => w.write_str(vars)?,
+            AckDetail::Command(cmd) => w.write_str(cmd)?,
+            AckDetail::Error { text, .. } => w.write_str(text)?,
+            AckDetail::Raw(raw) => w.write_str(raw)?,
+        }
+    }
+
+    Ok(w.written())
+}
+
 /// Build a headless inner frame (SERIAL|BODY for PUSH/PULL, SERIAL for PING).
 /// Returns the number of bytes written.
 pub fn build_headless(

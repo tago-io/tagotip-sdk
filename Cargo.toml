@@ -1,10 +1,10 @@
 [workspace]
-members = ["tagotip-codec", "tagotip-ffi", "tagotip-python"]
+members = ["tagotip-codec", "tagotip-secure", "tagotip-ffi", "tagotip-python"]
 resolver = "3"
 
 [workspace.package]
 edition = "2024"
-version = "0.1.0-beta.1"
+version = "0.1.0-beta.3"
 license = "Apache-2.0"
 authors = ["TagoIO Inc."]
 repository = "https://github.com/tago-io/tagotip-sdk"

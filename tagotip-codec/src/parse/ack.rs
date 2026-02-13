@@ -3,6 +3,29 @@ use crate::types::{AckDetail, AckFrame, AckStatus, ErrorCode};
 
 use super::frame::{parse_seq, split_fields};
 
+/// Parse an ACK inner frame from TagoTiP/S: `STATUS[|DETAIL]` (no `ACK|` prefix).
+pub fn parse_ack_inner(input: &str) -> Result<AckFrame<'_>, ParseError> {
+    let fields = split_fields(input);
+
+    if fields.is_empty() {
+        return Err(ParseError::new(ParseErrorKind::InvalidAck, 0));
+    }
+
+    let status = parse_ack_status(fields[0])?;
+
+    let detail = if fields.len() > 1 {
+        Some(parse_ack_detail(fields[1], status)?)
+    } else {
+        None
+    };
+
+    Ok(AckFrame {
+        seq: None,
+        status,
+        detail,
+    })
+}
+
 /// Parse an ACK (downlink) frame.
 ///
 /// Formats:

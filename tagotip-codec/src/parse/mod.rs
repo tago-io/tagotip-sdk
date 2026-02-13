@@ -161,6 +161,11 @@ pub fn parse_ack(input: &str) -> Result<AckFrame<'_>, ParseError> {
     ack::parse_ack(input)
 }
 
+/// Parse an ACK inner frame from TagoTiP/S: `STATUS[|DETAIL]` (no `ACK|` prefix).
+pub fn parse_ack_inner(input: &str) -> Result<AckFrame<'_>, ParseError> {
+    ack::parse_ack_inner(input)
+}
+
 /// Parse a headless inner frame (for TagoTiP/S).
 /// The method comes from the envelope flags byte.
 ///

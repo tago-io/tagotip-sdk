@@ -24,3 +24,8 @@ jobs:
         run: cargo publish -p tagotip-codec
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Publish tagotip-secure
+        run: cargo publish -p tagotip-secure
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}

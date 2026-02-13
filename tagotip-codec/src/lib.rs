@@ -25,4 +25,7 @@ pub use parse::{
 };
 
 // Re-export granular build functions
-pub use build::{build_metadata, build_pull_body, build_push_body, build_variable};
+pub use build::{build_ack_inner, build_metadata, build_pull_body, build_push_body, build_variable};
+
+// Re-export ACK inner frame parser for TagoTiP/S
+pub use parse::parse_ack_inner;
