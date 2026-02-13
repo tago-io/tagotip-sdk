@@ -255,7 +255,7 @@ fn parse_ack_native(py: Python<'_>, input: &str) -> PyResult<Py<PyDict>> {
 // ---------------------------------------------------------------------------
 
 fn crypto_error_to_py(e: tagotip_secure::CryptoError) -> PyErr {
-    PyValueError::new_err(format!("tagotips: {}", e))
+    PyValueError::new_err(format!("tagotips: {e}"))
 }
 
 #[pyfunction]
@@ -360,6 +360,24 @@ fn is_envelope_native(data: &[u8]) -> bool {
     tagotip_secure::is_envelope(data)
 }
 
+#[pyfunction]
+fn derive_key_native(py: Python<'_>, token: &str, serial: &str) -> PyResult<Py<pyo3::types::PyBytes>> {
+    let key = tagotip_secure::derive_key(token, serial);
+    Ok(pyo3::types::PyBytes::new(py, &key).into())
+}
+
+#[pyfunction]
+fn hex_to_bytes_native(py: Python<'_>, hex: &str) -> PyResult<Py<pyo3::types::PyBytes>> {
+    let bytes = tagotip_secure::hex_to_bytes(hex)
+        .ok_or_else(|| PyValueError::new_err("invalid hex string"))?;
+    Ok(pyo3::types::PyBytes::new(py, &bytes).into())
+}
+
+#[pyfunction]
+fn bytes_to_hex_native(data: &[u8]) -> String {
+    tagotip_secure::bytes_to_hex(data)
+}
+
 #[pymodule]
 fn _tagotip_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parse_uplink_native, m)?)?;
@@ -370,5 +388,8 @@ fn _tagotip_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(open_envelope_native, m)?)?;
     m.add_function(wrap_pyfunction!(parse_envelope_header_native, m)?)?;
     m.add_function(wrap_pyfunction!(is_envelope_native, m)?)?;
+    m.add_function(wrap_pyfunction!(derive_key_native, m)?)?;
+    m.add_function(wrap_pyfunction!(hex_to_bytes_native, m)?)?;
+    m.add_function(wrap_pyfunction!(bytes_to_hex_native, m)?)?;
     Ok(())
 }

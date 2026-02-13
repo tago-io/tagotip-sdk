@@ -1,4 +1,4 @@
-import { createHash, createCipheriv, createDecipheriv } from "node:crypto";
+import { createHash, createHmac, createCipheriv, createDecipheriv } from "node:crypto";
 
 const HEADER_SIZE = 21;
 const AUTH_HASH_SIZE = 8;
@@ -63,6 +63,36 @@ export function deriveAuthHash(token: string): Uint8Array {
 export function deriveDeviceHash(serial: string): Uint8Array {
   const digest = sha256(Buffer.from(serial, "utf-8"));
   return digest.slice(0, DEVICE_HASH_SIZE);
+}
+
+export function deriveKey(token: string, serial: string, keyLen: 16 | 32 = 16): Uint8Array {
+  const hexPart = token.startsWith("at") ? token.slice(2) : token;
+  const hmac = createHmac("sha256", Buffer.from(hexPart, "utf-8"));
+  hmac.update(Buffer.from(serial, "utf-8"));
+  const fullKey = new Uint8Array(hmac.digest());
+  return fullKey.slice(0, keyLen);
+}
+
+export function hexToBytes(hex: string): Uint8Array {
+  if (hex.length % 2 !== 0) {
+    throw new SecureError("hex string must have even length");
+  }
+  if (!/^[0-9a-fA-F]*$/.test(hex)) {
+    throw new SecureError("hex string contains non-hex characters");
+  }
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+  }
+  return bytes;
+}
+
+export function bytesToHex(bytes: Uint8Array): string {
+  let hex = "";
+  for (let i = 0; i < bytes.length; i++) {
+    hex += bytes[i].toString(16).padStart(2, "0");
+  }
+  return hex;
 }
 
 function encodeFlags(cipherSuiteId: number, version: number, methodId: number): number {

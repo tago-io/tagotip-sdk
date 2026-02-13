@@ -726,3 +726,124 @@ int tagotips_is_envelope(const uint8_t *data, size_t len) {
   if (!data || len == 0) return 0;
   return data[0] != RESERVED_FLAGS ? 1 : 0;
 }
+
+/* =========================================================================
+ * HMAC-SHA256 (RFC 2104) -- built on top of existing SHA-256
+ * ========================================================================= */
+
+#define HMAC_BLOCK_SIZE 64
+
+static void hmac_sha256(
+  const uint8_t *key, size_t key_len,
+  const uint8_t *msg, size_t msg_len,
+  uint8_t out[32]
+) {
+  uint8_t k_pad[HMAC_BLOCK_SIZE];
+  uint8_t ipad[HMAC_BLOCK_SIZE];
+  uint8_t opad[HMAC_BLOCK_SIZE];
+
+  /* If key > block size, hash it first */
+  uint8_t key_hash[32];
+  if (key_len > HMAC_BLOCK_SIZE) {
+    sha256(key, key_len, key_hash);
+    key = key_hash;
+    key_len = 32;
+  }
+
+  /* Pad key to block size */
+  memset(k_pad, 0, HMAC_BLOCK_SIZE);
+  memcpy(k_pad, key, key_len);
+
+  /* ipad = k_pad XOR 0x36, opad = k_pad XOR 0x5c */
+  for (int i = 0; i < HMAC_BLOCK_SIZE; i++) {
+    ipad[i] = k_pad[i] ^ 0x36;
+    opad[i] = k_pad[i] ^ 0x5c;
+  }
+
+  /* inner hash: SHA-256(ipad || msg) */
+  sha256_ctx ctx;
+  uint8_t inner_hash[32];
+  sha256_init(&ctx);
+  sha256_update(&ctx, ipad, HMAC_BLOCK_SIZE);
+  sha256_update(&ctx, msg, msg_len);
+  sha256_final(&ctx, inner_hash);
+
+  /* outer hash: SHA-256(opad || inner_hash) */
+  sha256_init(&ctx);
+  sha256_update(&ctx, opad, HMAC_BLOCK_SIZE);
+  sha256_update(&ctx, inner_hash, 32);
+  sha256_final(&ctx, out);
+
+  secure_zero(k_pad, HMAC_BLOCK_SIZE);
+  secure_zero(ipad, HMAC_BLOCK_SIZE);
+  secure_zero(opad, HMAC_BLOCK_SIZE);
+  secure_zero(inner_hash, 32);
+  secure_zero(key_hash, 32);
+  secure_zero(&ctx, sizeof(ctx));
+}
+
+/* =========================================================================
+ * Key derivation + hex utilities (public API)
+ * ========================================================================= */
+
+int32_t tagotips_derive_key(const char *token, const char *serial,
+                            uint8_t *out_key, size_t key_len) {
+  if (!token || !serial || !out_key) return TAGOTIPS_ERR_NULL_PTR;
+  if (key_len == 0 || key_len > 32) return TAGOTIPS_ERR_BUFFER_TOO_SMALL;
+
+  const char *hex_part = token;
+  if (token[0] == 'a' && token[1] == 't') {
+    hex_part = token + 2;
+  }
+
+  uint8_t full_key[32];
+  hmac_sha256((const uint8_t *)hex_part, strlen(hex_part),
+              (const uint8_t *)serial, strlen(serial),
+              full_key);
+
+  memcpy(out_key, full_key, key_len);
+  secure_zero(full_key, 32);
+  return TAGOTIPS_OK;
+}
+
+static int hex_char_value(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return -1;
+}
+
+int32_t tagotips_hex_to_bytes(const char *hex, size_t hex_len,
+                              uint8_t *out_buf, size_t out_buf_len) {
+  if (!hex || !out_buf) return TAGOTIPS_ERR_NULL_PTR;
+  if (hex_len % 2 != 0) return TAGOTIPS_ERR_INVALID_HEX;
+
+  size_t byte_len = hex_len / 2;
+  if (out_buf_len < byte_len) return TAGOTIPS_ERR_BUFFER_TOO_SMALL;
+
+  for (size_t i = 0; i < byte_len; i++) {
+    int hi = hex_char_value(hex[i * 2]);
+    int lo = hex_char_value(hex[i * 2 + 1]);
+    if (hi < 0 || lo < 0) return TAGOTIPS_ERR_INVALID_HEX;
+    out_buf[i] = (uint8_t)((hi << 4) | lo);
+  }
+
+  return TAGOTIPS_OK;
+}
+
+int32_t tagotips_bytes_to_hex(const uint8_t *data, size_t data_len,
+                              char *out_buf, size_t out_buf_len) {
+  if (!data || !out_buf) return TAGOTIPS_ERR_NULL_PTR;
+
+  size_t needed = data_len * 2 + 1;
+  if (out_buf_len < needed) return TAGOTIPS_ERR_BUFFER_TOO_SMALL;
+
+  static const char HEX[] = "0123456789abcdef";
+  for (size_t i = 0; i < data_len; i++) {
+    out_buf[i * 2]     = HEX[data[i] >> 4];
+    out_buf[i * 2 + 1] = HEX[data[i] & 0x0f];
+  }
+  out_buf[data_len * 2] = '\0';
+
+  return TAGOTIPS_OK;
+}

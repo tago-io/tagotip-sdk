@@ -8,6 +8,9 @@ from typing import Optional
 from tagotip._tagotip_native import (
     derive_auth_hash_native,
     derive_device_hash_native,
+    derive_key_native,
+    hex_to_bytes_native,
+    bytes_to_hex_native,
     seal_uplink_native,
     open_envelope_native,
     parse_envelope_header_native,
@@ -50,6 +53,34 @@ def derive_device_hash(serial: str) -> bytes:
     Computes SHA-256 of the serial (UTF-8 encoded) and returns the first 8 bytes.
     """
     return bytes(derive_device_hash_native(serial))
+
+
+def derive_key(token: str, serial: str, key_len: int = 16) -> bytes:
+    """Derive an encryption key from a token and serial using HMAC-SHA256.
+
+    The "at" prefix is stripped from the token. The remaining hex string
+    (UTF-8) is used as the HMAC key; the serial (UTF-8) is the HMAC message.
+
+    Args:
+        token: Authorization token (with or without "at" prefix).
+        serial: Device serial number.
+        key_len: Key length in bytes (16 for AES-128, 32 for AES-256).
+
+    Returns:
+        The derived encryption key bytes.
+    """
+    full_key = bytes(derive_key_native(token, serial))
+    return full_key[:key_len]
+
+
+def hex_to_bytes(hex_str: str) -> bytes:
+    """Decode a hex string into bytes."""
+    return bytes(hex_to_bytes_native(hex_str))
+
+
+def bytes_to_hex(data: bytes) -> str:
+    """Encode bytes as a lowercase hex string."""
+    return bytes_to_hex_native(data)
 
 
 def seal_uplink(

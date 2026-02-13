@@ -3,6 +3,9 @@ import { strict as assert } from "node:assert";
 import {
   deriveAuthHash,
   deriveDeviceHash,
+  deriveKey,
+  hexToBytes,
+  bytesToHex,
   sealUplink,
   openEnvelope,
   parseEnvelopeHeader,
@@ -160,6 +163,81 @@ describe("parseEnvelopeHeader", () => {
     assert.equal(header.counter, 42);
     assert.ok(arraysEqual(header.authHash, specAuthHash));
     assert.ok(arraysEqual(header.deviceHash, specDeviceHash));
+  });
+});
+
+describe("deriveKey", () => {
+  const expectedDerivedKey = new Uint8Array([
+    0xe5, 0x05, 0xf0, 0x3c, 0xc9, 0xe9, 0x3f, 0xdb,
+    0xcc, 0x38, 0x28, 0x44, 0xcc, 0xa3, 0xe1, 0x7f,
+    0xdf, 0x0b, 0xb3, 0x13, 0x18, 0x58, 0x53, 0x95,
+    0xce, 0xaa, 0xa3, 0x9a, 0x5d, 0x14, 0x19, 0x64,
+  ]);
+
+  it("derives key matching spec vector (32 bytes)", () => {
+    const key = deriveKey(specToken, specSerial, 32);
+    assert.ok(arraysEqual(key, expectedDerivedKey));
+  });
+
+  it("derives key matching spec vector (16 bytes)", () => {
+    const key = deriveKey(specToken, specSerial, 16);
+    assert.ok(arraysEqual(key, expectedDerivedKey.slice(0, 16)));
+  });
+
+  it("works without at prefix", () => {
+    const keyWith = deriveKey(specToken, specSerial, 32);
+    const keyWithout = deriveKey("e2bd319014b24e0a8aca9f00aea4c0d0", specSerial, 32);
+    assert.ok(arraysEqual(keyWith, keyWithout));
+  });
+
+  it("seal/open round-trip with derived key", () => {
+    const key = deriveKey(specToken, specSerial);
+    const authHash = deriveAuthHash(specToken);
+    const deviceHash = deriveDeviceHash(specSerial);
+    const innerFrame = new TextEncoder().encode("sensor-01|[temp:=32]");
+    const envelope = sealUplink("push", innerFrame, 1, authHash, deviceHash, key);
+    const { method, plaintext } = openEnvelope(envelope, key);
+    assert.equal(method, "push");
+    assert.ok(arraysEqual(plaintext, innerFrame));
+  });
+});
+
+describe("hex utilities", () => {
+  it("hexToBytes decodes correctly", () => {
+    const result = hexToBytes("fe09da81bc4400ee");
+    const expected = new Uint8Array([0xfe, 0x09, 0xda, 0x81, 0xbc, 0x44, 0x00, 0xee]);
+    assert.ok(arraysEqual(result, expected));
+  });
+
+  it("bytesToHex encodes correctly", () => {
+    const data = new Uint8Array([0xfe, 0x09, 0xda, 0x81]);
+    assert.equal(bytesToHex(data), "fe09da81");
+  });
+
+  it("round-trips hex", () => {
+    const original = new Uint8Array([0xfe, 0x09, 0xda, 0x81, 0xbc, 0x44, 0x00, 0xee, 0x12, 0xab, 0x56, 0xcd, 0x78, 0xef, 0x90, 0x12]);
+    const hex = bytesToHex(original);
+    assert.equal(hex, "fe09da81bc4400ee12ab56cd78ef9012");
+    const decoded = hexToBytes(hex);
+    assert.ok(arraysEqual(decoded, original));
+  });
+
+  it("hexToBytes handles uppercase", () => {
+    const result = hexToBytes("AABB");
+    assert.ok(arraysEqual(result, new Uint8Array([0xaa, 0xbb])));
+  });
+
+  it("hexToBytes rejects odd length", () => {
+    assert.throws(() => hexToBytes("abc"), SecureError);
+  });
+
+  it("hexToBytes rejects non-hex chars", () => {
+    assert.throws(() => hexToBytes("zz00"), SecureError);
+  });
+
+  it("hexToBytes handles empty string", () => {
+    const result = hexToBytes("");
+    assert.equal(result.length, 0);
   });
 });
 

@@ -2,10 +2,13 @@ package tagotip
 
 import (
 	"crypto/aes"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 const (
@@ -86,6 +89,34 @@ func DeriveDeviceHash(serial string) [deviceHashSize]byte {
 	var hash [deviceHashSize]byte
 	copy(hash[:], digest[:deviceHashSize])
 	return hash
+}
+
+// DeriveKey derives an encryption key from a token and serial using HMAC-SHA256.
+// The "at" prefix is stripped from the token. The remaining hex string (UTF-8)
+// is used as the HMAC key; the serial (UTF-8) is the HMAC message.
+// keyLen must be 16 (AES-128) or 32 (AES-256/ChaCha20).
+func DeriveKey(token, serial string, keyLen int) ([]byte, error) {
+	if keyLen != 16 && keyLen != 32 {
+		return nil, secureErr("key length must be 16 or 32")
+	}
+	hexPart := token
+	if strings.HasPrefix(token, "at") {
+		hexPart = token[2:]
+	}
+	mac := hmac.New(sha256.New, []byte(hexPart))
+	mac.Write([]byte(serial))
+	fullKey := mac.Sum(nil)
+	return fullKey[:keyLen], nil
+}
+
+// HexToBytes decodes a hex string into bytes.
+func HexToBytes(hexStr string) ([]byte, error) {
+	return hex.DecodeString(hexStr)
+}
+
+// BytesToHex encodes bytes as a lowercase hex string.
+func BytesToHex(data []byte) string {
+	return hex.EncodeToString(data)
 }
 
 func encodeFlags(cipherID, version, methodID int) (byte, error) {

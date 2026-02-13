@@ -501,6 +501,134 @@ void test_inner_too_large(void) {
 }
 
 /* =========================================================================
+ * derive_key tests
+ * ========================================================================= */
+
+static const uint8_t SPEC_DERIVED_KEY[32] = {
+  0xe5, 0x05, 0xf0, 0x3c, 0xc9, 0xe9, 0x3f, 0xdb,
+  0xcc, 0x38, 0x28, 0x44, 0xcc, 0xa3, 0xe1, 0x7f,
+  0xdf, 0x0b, 0xb3, 0x13, 0x18, 0x58, 0x53, 0x95,
+  0xce, 0xaa, 0xa3, 0x9a, 0x5d, 0x14, 0x19, 0x64
+};
+
+void test_derive_key_spec_vector(void) {
+  uint8_t key[32];
+  int32_t rc = tagotips_derive_key(SPEC_TOKEN, SPEC_SERIAL, key, 32);
+  ASSERT_EQ(rc, TAGOTIPS_OK, "derive_key returns OK");
+  ASSERT_MEM_EQ(key, SPEC_DERIVED_KEY, 32, "derive_key matches spec vector");
+}
+
+void test_derive_key_16_bytes(void) {
+  uint8_t key[16];
+  int32_t rc = tagotips_derive_key(SPEC_TOKEN, SPEC_SERIAL, key, 16);
+  ASSERT_EQ(rc, TAGOTIPS_OK, "derive_key 16 bytes returns OK");
+  ASSERT_MEM_EQ(key, SPEC_DERIVED_KEY, 16, "derive_key 16 bytes matches first 16");
+}
+
+void test_derive_key_without_prefix(void) {
+  uint8_t key_with[32], key_without[32];
+  tagotips_derive_key(SPEC_TOKEN, SPEC_SERIAL, key_with, 32);
+  tagotips_derive_key("e2bd319014b24e0a8aca9f00aea4c0d0", SPEC_SERIAL, key_without, 32);
+  ASSERT_MEM_EQ(key_with, key_without, 32, "derive_key with/without 'at' prefix match");
+}
+
+void test_derive_key_seal_open_round_trip(void) {
+  uint8_t key[16];
+  tagotips_derive_key(SPEC_TOKEN, SPEC_SERIAL, key, 16);
+
+  uint8_t auth_hash[8], device_hash[8];
+  tagotips_derive_auth_hash(SPEC_TOKEN, auth_hash);
+  tagotips_derive_device_hash(SPEC_SERIAL, device_hash);
+
+  const uint8_t plaintext[] = "sensor-01|[temp:=32]";
+  size_t pt_len = sizeof(plaintext) - 1;
+
+  uint8_t envelope[128];
+  int32_t sealed = tagotips_seal(
+    plaintext, pt_len,
+    TAGOTIPS_METHOD_PUSH, 1,
+    auth_hash, device_hash, key,
+    envelope, sizeof(envelope));
+  ASSERT_TRUE(sealed > 0, "derive_key round-trip seal succeeds");
+
+  TagotipsHeader hdr;
+  uint8_t method;
+  uint8_t recovered[128];
+  int32_t opened = tagotips_open(
+    envelope, (size_t)sealed,
+    key, &hdr, &method, recovered, sizeof(recovered));
+  ASSERT_EQ(opened, (int32_t)pt_len, "derive_key round-trip open length");
+  ASSERT_TRUE(memcmp(recovered, plaintext, pt_len) == 0, "derive_key round-trip plaintext matches");
+}
+
+/* =========================================================================
+ * hex utility tests
+ * ========================================================================= */
+
+void test_hex_to_bytes_valid(void) {
+  uint8_t buf[8];
+  int32_t rc = tagotips_hex_to_bytes("fe09da81bc4400ee", 16, buf, sizeof(buf));
+  ASSERT_EQ(rc, TAGOTIPS_OK, "hex_to_bytes valid returns OK");
+  uint8_t expected[8] = { 0xfe, 0x09, 0xda, 0x81, 0xbc, 0x44, 0x00, 0xee };
+  ASSERT_MEM_EQ(buf, expected, 8, "hex_to_bytes valid output");
+}
+
+void test_hex_to_bytes_uppercase(void) {
+  uint8_t buf[2];
+  int32_t rc = tagotips_hex_to_bytes("AABB", 4, buf, sizeof(buf));
+  ASSERT_EQ(rc, TAGOTIPS_OK, "hex_to_bytes uppercase returns OK");
+  uint8_t expected[2] = { 0xaa, 0xbb };
+  ASSERT_MEM_EQ(buf, expected, 2, "hex_to_bytes uppercase output");
+}
+
+void test_hex_to_bytes_odd_length(void) {
+  uint8_t buf[2];
+  int32_t rc = tagotips_hex_to_bytes("abc", 3, buf, sizeof(buf));
+  ASSERT_EQ(rc, TAGOTIPS_ERR_INVALID_HEX, "hex_to_bytes odd length");
+}
+
+void test_hex_to_bytes_invalid_chars(void) {
+  uint8_t buf[2];
+  int32_t rc = tagotips_hex_to_bytes("zz00", 4, buf, sizeof(buf));
+  ASSERT_EQ(rc, TAGOTIPS_ERR_INVALID_HEX, "hex_to_bytes invalid chars");
+}
+
+void test_hex_to_bytes_buffer_too_small(void) {
+  uint8_t buf[1];
+  int32_t rc = tagotips_hex_to_bytes("aabbccdd", 8, buf, sizeof(buf));
+  ASSERT_EQ(rc, TAGOTIPS_ERR_BUFFER_TOO_SMALL, "hex_to_bytes buffer too small");
+}
+
+void test_bytes_to_hex_valid(void) {
+  uint8_t data[4] = { 0xfe, 0x09, 0xda, 0x81 };
+  char buf[16];
+  int32_t rc = tagotips_bytes_to_hex(data, 4, buf, sizeof(buf));
+  ASSERT_EQ(rc, TAGOTIPS_OK, "bytes_to_hex returns OK");
+  ASSERT_TRUE(strcmp(buf, "fe09da81") == 0, "bytes_to_hex output");
+}
+
+void test_bytes_to_hex_buffer_too_small(void) {
+  uint8_t data[4] = { 0xfe, 0x09, 0xda, 0x81 };
+  char buf[4]; /* needs 9 bytes: 4*2 + null */
+  int32_t rc = tagotips_bytes_to_hex(data, 4, buf, sizeof(buf));
+  ASSERT_EQ(rc, TAGOTIPS_ERR_BUFFER_TOO_SMALL, "bytes_to_hex buffer too small");
+}
+
+void test_hex_round_trip(void) {
+  uint8_t original[16] = {
+    0xfe, 0x09, 0xda, 0x81, 0xbc, 0x44, 0x00, 0xee,
+    0x12, 0xab, 0x56, 0xcd, 0x78, 0xef, 0x90, 0x12
+  };
+  char hex_buf[33];
+  tagotips_bytes_to_hex(original, 16, hex_buf, sizeof(hex_buf));
+  ASSERT_TRUE(strcmp(hex_buf, "fe09da81bc4400ee12ab56cd78ef9012") == 0, "hex round-trip hex string");
+
+  uint8_t decoded[16];
+  tagotips_hex_to_bytes(hex_buf, 32, decoded, sizeof(decoded));
+  ASSERT_MEM_EQ(decoded, original, 16, "hex round-trip decoded bytes");
+}
+
+/* =========================================================================
  * Constants
  * ========================================================================= */
 
@@ -628,6 +756,22 @@ int main(void) {
   test_unsupported_cipher_on_open();
   test_unsupported_version_on_open();
   test_inner_too_large();
+
+  /* Key derivation */
+  test_derive_key_spec_vector();
+  test_derive_key_16_bytes();
+  test_derive_key_without_prefix();
+  test_derive_key_seal_open_round_trip();
+
+  /* Hex utilities */
+  test_hex_to_bytes_valid();
+  test_hex_to_bytes_uppercase();
+  test_hex_to_bytes_odd_length();
+  test_hex_to_bytes_invalid_chars();
+  test_hex_to_bytes_buffer_too_small();
+  test_bytes_to_hex_valid();
+  test_bytes_to_hex_buffer_too_small();
+  test_hex_round_trip();
 
   /* Constants */
   test_constants();

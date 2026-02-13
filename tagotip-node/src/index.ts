@@ -31,6 +31,9 @@ export { buildUplink, buildAck, buildHeadless, buildAckInner } from "./build.ts"
 export {
   deriveAuthHash,
   deriveDeviceHash,
+  deriveKey,
+  hexToBytes,
+  bytesToHex,
   sealUplink,
   openEnvelope,
   parseEnvelopeHeader,

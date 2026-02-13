@@ -4,6 +4,9 @@ import pytest
 from tagotip.secure import (
     derive_auth_hash,
     derive_device_hash,
+    derive_key,
+    hex_to_bytes,
+    bytes_to_hex,
     seal_uplink,
     open_envelope,
     parse_envelope_header,
@@ -113,6 +116,73 @@ class TestErrorCases:
     def test_invalid_key_size(self):
         with pytest.raises(ValueError):
             seal_uplink(0, b"test", 1, SPEC_AUTH_HASH, SPEC_DEVICE_HASH, bytes(8))
+
+
+SPEC_DERIVED_KEY = bytes([
+    0xe5, 0x05, 0xf0, 0x3c, 0xc9, 0xe9, 0x3f, 0xdb,
+    0xcc, 0x38, 0x28, 0x44, 0xcc, 0xa3, 0xe1, 0x7f,
+    0xdf, 0x0b, 0xb3, 0x13, 0x18, 0x58, 0x53, 0x95,
+    0xce, 0xaa, 0xa3, 0x9a, 0x5d, 0x14, 0x19, 0x64,
+])
+
+
+class TestDeriveKey:
+    def test_derive_key_spec_vector_32(self):
+        key = derive_key(SPEC_TOKEN, SPEC_SERIAL, 32)
+        assert key == SPEC_DERIVED_KEY
+
+    def test_derive_key_spec_vector_16(self):
+        key = derive_key(SPEC_TOKEN, SPEC_SERIAL, 16)
+        assert key == SPEC_DERIVED_KEY[:16]
+
+    def test_derive_key_without_prefix(self):
+        key_with = derive_key(SPEC_TOKEN, SPEC_SERIAL, 32)
+        key_without = derive_key("e2bd319014b24e0a8aca9f00aea4c0d0", SPEC_SERIAL, 32)
+        assert key_with == key_without
+
+    def test_derive_key_seal_open_round_trip(self):
+        key = derive_key(SPEC_TOKEN, SPEC_SERIAL, 16)
+        auth_hash = derive_auth_hash(SPEC_TOKEN)
+        device_hash = derive_device_hash(SPEC_SERIAL)
+        inner = b"sensor-01|[temp:=32]"
+        envelope = seal_uplink(0, inner, 1, auth_hash, device_hash, key)
+        result = open_envelope(envelope, key)
+        assert result.method == 0
+        assert result.plaintext == inner
+
+
+class TestHexUtilities:
+    def test_hex_to_bytes(self):
+        result = hex_to_bytes("fe09da81bc4400ee")
+        expected = bytes([0xfe, 0x09, 0xda, 0x81, 0xbc, 0x44, 0x00, 0xee])
+        assert result == expected
+
+    def test_bytes_to_hex(self):
+        data = bytes([0xfe, 0x09, 0xda, 0x81])
+        assert bytes_to_hex(data) == "fe09da81"
+
+    def test_hex_round_trip(self):
+        original = SPEC_KEY
+        hex_str = bytes_to_hex(original)
+        assert hex_str == "fe09da81bc4400ee12ab56cd78ef9012"
+        decoded = hex_to_bytes(hex_str)
+        assert decoded == original
+
+    def test_hex_to_bytes_uppercase(self):
+        result = hex_to_bytes("AABB")
+        assert result == bytes([0xaa, 0xbb])
+
+    def test_hex_to_bytes_rejects_odd_length(self):
+        with pytest.raises(ValueError):
+            hex_to_bytes("abc")
+
+    def test_hex_to_bytes_rejects_invalid_chars(self):
+        with pytest.raises(ValueError):
+            hex_to_bytes("zz00")
+
+    def test_hex_to_bytes_empty(self):
+        result = hex_to_bytes("")
+        assert result == b""
 
 
 class TestIsEnvelope:

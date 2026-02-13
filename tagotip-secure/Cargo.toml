@@ -20,11 +20,12 @@ aes-256-ccm = ["dep:aes", "dep:ccm"]
 aes-256-gcm = ["dep:aes", "dep:aes-gcm"]
 chacha20-poly1305 = ["dep:chacha20poly1305"]
 full = ["aes-128-ccm", "aes-128-gcm", "aes-256-ccm", "aes-256-gcm", "chacha20-poly1305"]
-std = ["tagotip-codec/std", "sha2/std"]
+std = ["tagotip-codec/std", "sha2/std", "hmac/std"]
 
 [dependencies]
 tagotip-codec = { version = "0.1.0-beta.2", path = "../tagotip-codec" }
 sha2 = { version = "0.10", default-features = false }
+hmac = { version = "0.12", default-features = false }
 aes = { version = "0.8", default-features = false, optional = true }
 ccm = { version = "0.5", default-features = false, features = ["alloc"], optional = true }
 aes-gcm = { version = "0.10", default-features = false, features = ["alloc", "aes"], optional = true }

@@ -43,6 +43,7 @@ extern "C" {
 #define TAGOTIPS_ERR_INVALID_METHOD       -8
 #define TAGOTIPS_ERR_INNER_TOO_LARGE      -9
 #define TAGOTIPS_ERR_RESERVED_FLAGS       -10
+#define TAGOTIPS_ERR_INVALID_HEX         -11
 
 /* -----------------------------------------------------------------------
  * Envelope methods
@@ -134,6 +135,39 @@ int32_t tagotips_parse_header(
  * ACK (starts with 'A' = 0x41) or empty.
  */
 int tagotips_is_envelope(const uint8_t *data, size_t len);
+
+/* -----------------------------------------------------------------------
+ * Key derivation (HMAC-SHA256)
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Derive an encryption key from a token and serial using HMAC-SHA256.
+ * The "at" prefix is stripped from the token. The remaining hex string
+ * (UTF-8) is the HMAC key; the serial (UTF-8) is the HMAC message.
+ * Returns 0 on success, or a negative error code.
+ */
+int32_t tagotips_derive_key(const char *token, const char *serial,
+                            uint8_t *out_key, size_t key_len);
+
+/* -----------------------------------------------------------------------
+ * Hex utilities
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Decode a hex string into bytes.
+ * hex_len must be even. Returns 0 on success, TAGOTIPS_ERR_INVALID_HEX
+ * if the string has odd length or contains non-hex characters.
+ */
+int32_t tagotips_hex_to_bytes(const char *hex, size_t hex_len,
+                              uint8_t *out_buf, size_t out_buf_len);
+
+/**
+ * Encode bytes as a lowercase hex string (null-terminated).
+ * out_buf must have room for data_len * 2 + 1 bytes.
+ * Returns 0 on success, or TAGOTIPS_ERR_BUFFER_TOO_SMALL.
+ */
+int32_t tagotips_bytes_to_hex(const uint8_t *data, size_t data_len,
+                              char *out_buf, size_t out_buf_len);
 
 #ifdef __cplusplus
 }

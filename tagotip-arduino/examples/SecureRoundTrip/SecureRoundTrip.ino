@@ -42,15 +42,15 @@ void setup() {
 
   static const char token[] = "ate2bd319014b24e0a8aca9f00aea4c0d0";
   static const char serial[] = "sensor-01";
-  static const uint8_t key[16] = {
-      0xfe, 0x09, 0xda, 0x81, 0xbc, 0x44, 0x00, 0xee,
-      0x12, 0xab, 0x56, 0xcd, 0x78, 0xef, 0x90, 0x12,
-  };
   static const uint8_t inner_frame[] = "sensor-01|[temp:=32]";
 
+  uint8_t key[16];
+  tagotips_derive_key(token, serial, key, sizeof(key));
+
   uint8_t auth_hash[8];
-  uint8_t device_hash[8];
   tagotips_derive_auth_hash(token, auth_hash);
+
+  uint8_t device_hash[8];
   tagotips_derive_device_hash(serial, device_hash);
 
   Serial.print("Auth hash: ");

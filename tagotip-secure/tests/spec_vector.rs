@@ -18,14 +18,21 @@ use tagotip_codec::types::{
     HeadlessFrame, Method, Operator, PushBody, StructuredBody, Value, Variable,
 };
 use tagotip_secure::{
-    CipherSuite, derive_auth_hash, derive_device_hash, is_envelope, open_envelope,
-    parse_envelope_header, seal_uplink,
+    CipherSuite, bytes_to_hex, derive_auth_hash, derive_device_hash, derive_key, hex_to_bytes,
+    is_envelope, open_envelope, parse_envelope_header, seal_uplink,
 };
 
 const TOKEN: &str = "ate2bd319014b24e0a8aca9f00aea4c0d0";
 const SERIAL: &str = "sensor-01";
 const ENCRYPTION_KEY: [u8; 16] = [
     0xfe, 0x09, 0xda, 0x81, 0xbc, 0x44, 0x00, 0xee, 0x12, 0xab, 0x56, 0xcd, 0x78, 0xef, 0x90, 0x12,
+];
+#[rustfmt::skip]
+const EXPECTED_DERIVED_KEY: [u8; 32] = [
+    0xe5, 0x05, 0xf0, 0x3c, 0xc9, 0xe9, 0x3f, 0xdb,
+    0xcc, 0x38, 0x28, 0x44, 0xcc, 0xa3, 0xe1, 0x7f,
+    0xdf, 0x0b, 0xb3, 0x13, 0x18, 0x58, 0x53, 0x95,
+    0xce, 0xaa, 0xa3, 0x9a, 0x5d, 0x14, 0x19, 0x64,
 ];
 const COUNTER: u32 = 42;
 
@@ -209,6 +216,56 @@ fn test_parse_header_spec_envelope() {
 fn test_is_envelope_spec() {
     assert!(is_envelope(&EXPECTED_ENVELOPE));
     assert!(!is_envelope(b"ACK|OK|3")); // Starts with 'A' = 0x41
+}
+
+#[test]
+fn test_derive_key_spec_vector() {
+    let key = derive_key(TOKEN, SERIAL);
+    assert_eq!(key, EXPECTED_DERIVED_KEY);
+}
+
+#[test]
+fn test_seal_open_with_derived_key() {
+    let derived = derive_key(TOKEN, SERIAL);
+    let key16 = &derived[..16];
+    let auth_hash = derive_auth_hash(TOKEN);
+
+    let mut variables = InlineVec::new();
+    let _ = variables.push(Variable {
+        name: "temp",
+        operator: Operator::Number,
+        value: Value::Number("32"),
+        unit: None,
+        timestamp: None,
+        group: None,
+        meta: None,
+    });
+
+    let frame = HeadlessFrame {
+        serial: SERIAL,
+        push_body: Some(PushBody::Structured(StructuredBody {
+            group: None,
+            timestamp: None,
+            body_meta: None,
+            variables,
+            meta_pool: InlineVec::new(),
+        })),
+        pull_body: None,
+    };
+
+    let envelope =
+        seal_uplink(Method::Push, &frame, 1, auth_hash, key16, CipherSuite::Aes128Ccm).unwrap();
+    let (_, method, plaintext) = open_envelope(&envelope, key16).unwrap();
+    assert_eq!(method, tagotip_secure::EnvelopeMethod::Push);
+    assert_eq!(plaintext, b"sensor-01|[temp:=32]");
+}
+
+#[test]
+fn test_hex_round_trip() {
+    let hex = bytes_to_hex(&ENCRYPTION_KEY);
+    assert_eq!(hex, "fe09da81bc4400ee12ab56cd78ef9012");
+    let decoded = hex_to_bytes(&hex).unwrap();
+    assert_eq!(decoded.as_slice(), &ENCRYPTION_KEY);
 }
 
 #[test]

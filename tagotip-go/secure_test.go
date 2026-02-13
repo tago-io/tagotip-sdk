@@ -48,6 +48,137 @@ func TestDeriveDeviceHashSpecVector(t *testing.T) {
 }
 
 // =========================================================================
+// Key derivation tests
+// =========================================================================
+
+var specDerivedKey = []byte{
+	0xe5, 0x05, 0xf0, 0x3c, 0xc9, 0xe9, 0x3f, 0xdb,
+	0xcc, 0x38, 0x28, 0x44, 0xcc, 0xa3, 0xe1, 0x7f,
+	0xdf, 0x0b, 0xb3, 0x13, 0x18, 0x58, 0x53, 0x95,
+	0xce, 0xaa, 0xa3, 0x9a, 0x5d, 0x14, 0x19, 0x64,
+}
+
+func TestDeriveKeySpecVector32(t *testing.T) {
+	key, err := DeriveKey(specToken, specSerial, 32)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(key, specDerivedKey) {
+		t.Errorf("derived key mismatch:\n  want: %x\n  got:  %x", specDerivedKey, key)
+	}
+}
+
+func TestDeriveKeySpecVector16(t *testing.T) {
+	key, err := DeriveKey(specToken, specSerial, 16)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(key, specDerivedKey[:16]) {
+		t.Errorf("derived key (16) mismatch:\n  want: %x\n  got:  %x", specDerivedKey[:16], key)
+	}
+}
+
+func TestDeriveKeyWithoutPrefix(t *testing.T) {
+	keyWith, _ := DeriveKey(specToken, specSerial, 32)
+	keyWithout, _ := DeriveKey("e2bd319014b24e0a8aca9f00aea4c0d0", specSerial, 32)
+	if !bytes.Equal(keyWith, keyWithout) {
+		t.Errorf("keys should match with/without 'at' prefix")
+	}
+}
+
+func TestDeriveKeyInvalidKeyLen(t *testing.T) {
+	_, err := DeriveKey(specToken, specSerial, 8)
+	if err == nil {
+		t.Fatal("expected error with invalid key length")
+	}
+}
+
+func TestDeriveKeySealOpenRoundTrip(t *testing.T) {
+	key, _ := DeriveKey(specToken, specSerial, 16)
+	authHash := DeriveAuthHash(specToken)
+	deviceHash := DeriveDeviceHash(specSerial)
+
+	innerFrame := []byte("sensor-01|[temp:=32]")
+	envelope, err := SealUplink(EnvelopeMethodPush, innerFrame, 1, authHash, deviceHash, key, CipherSuiteAes128Ccm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, method, plaintext, err := OpenEnvelope(envelope, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if method != EnvelopeMethodPush {
+		t.Errorf("expected PUSH")
+	}
+	if !bytes.Equal(plaintext, innerFrame) {
+		t.Errorf("plaintext mismatch")
+	}
+}
+
+// =========================================================================
+// Hex utility tests
+// =========================================================================
+
+func TestHexToBytes(t *testing.T) {
+	result, err := HexToBytes("fe09da81bc4400ee")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := []byte{0xfe, 0x09, 0xda, 0x81, 0xbc, 0x44, 0x00, 0xee}
+	if !bytes.Equal(result, expected) {
+		t.Errorf("hex_to_bytes mismatch")
+	}
+}
+
+func TestBytesToHex(t *testing.T) {
+	data := []byte{0xfe, 0x09, 0xda, 0x81}
+	result := BytesToHex(data)
+	if result != "fe09da81" {
+		t.Errorf("bytes_to_hex mismatch: %s", result)
+	}
+}
+
+func TestHexRoundTrip(t *testing.T) {
+	original := specKey
+	hexStr := BytesToHex(original)
+	if hexStr != "fe09da81bc4400ee12ab56cd78ef9012" {
+		t.Errorf("hex string mismatch: %s", hexStr)
+	}
+	decoded, err := HexToBytes(hexStr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(decoded, original) {
+		t.Errorf("round-trip mismatch")
+	}
+}
+
+func TestHexToBytesInvalidOddLength(t *testing.T) {
+	_, err := HexToBytes("abc")
+	if err == nil {
+		t.Fatal("expected error for odd length")
+	}
+}
+
+func TestHexToBytesInvalidChars(t *testing.T) {
+	_, err := HexToBytes("zz00")
+	if err == nil {
+		t.Fatal("expected error for non-hex chars")
+	}
+}
+
+func TestHexToBytesEmpty(t *testing.T) {
+	result, err := HexToBytes("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result) != 0 {
+		t.Errorf("expected empty result")
+	}
+}
+
+// =========================================================================
 // Validation tests (lowercase-only, serial chars)
 // =========================================================================
 
