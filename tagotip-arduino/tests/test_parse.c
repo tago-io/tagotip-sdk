@@ -235,7 +235,7 @@ void test_uplink_frame_layout(void) {
     frame.method = TAGOTIP_METHOD_PUSH;
     frame.has_seq = 1;
     frame.seq = 42;
-    const char *auth = "ate2bd319014b24e0a8aca9f00aea4c0d0";
+    const char *auth = "4deedd7bab8817ec";
     frame.auth.ptr = (const uint8_t *)auth;
     frame.auth.len = strlen(auth);
     const char *serial = "sensor_01";
@@ -252,7 +252,7 @@ void test_uplink_frame_layout(void) {
     ASSERT_EQ(frame.method, TAGOTIP_METHOD_PUSH, "UplinkFrame.method");
     ASSERT_EQ(frame.has_seq, 1, "UplinkFrame.has_seq");
     ASSERT_EQ((int)frame.seq, 42, "UplinkFrame.seq");
-    ASSERT_EQ((int)frame.auth.len, 34, "UplinkFrame.auth.len");
+    ASSERT_EQ((int)frame.auth.len, 16, "UplinkFrame.auth.len");
     ASSERT_EQ((int)frame.serial.len, 9, "UplinkFrame.serial.len");
     ASSERT_EQ(frame.push_body_tag, TAGOTIP_PUSH_BODY_STRUCTURED, "UplinkFrame.push_body_tag");
     ASSERT_EQ(frame.variables_len, 1, "UplinkFrame.variables_len");
@@ -396,7 +396,7 @@ void test_ping_frame_layout(void) {
     memset(&frame, 0, sizeof(frame));
 
     frame.method = TAGOTIP_METHOD_PING;
-    const char *auth = "ate2bd319014b24e0a8aca9f00aea4c0d0";
+    const char *auth = "4deedd7bab8817ec";
     frame.auth.ptr = (const uint8_t *)auth;
     frame.auth.len = strlen(auth);
     const char *serial = "sensor_01";

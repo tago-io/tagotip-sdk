@@ -4,7 +4,8 @@ use pyo3::types::{PyDict, PyList};
 
 use tagotip_codec::parse;
 use tagotip_codec::types::{
-    AckDetail, AckStatus, ErrorCode, Method, Operator, PassthroughEncoding, PushBody, Value,
+    AckDetail, AckStatus, ErrorCode, Method, Operator, PassthroughEncoding, PushBody,
+    StructuredBody, Value,
 };
 use tagotip_codec::{ParseError, ParseErrorKind};
 
@@ -73,6 +74,94 @@ fn error_code_str(c: &ErrorCode) -> &'static str {
     }
 }
 
+fn structured_body_to_dict<'py>(
+    py: Python<'py>,
+    sb: &StructuredBody<'_>,
+) -> PyResult<Bound<'py, PyDict>> {
+    let body_dict = PyDict::new(py);
+    body_dict.set_item("type", "structured")?;
+
+    if let Some(g) = sb.group {
+        body_dict.set_item("group", g)?;
+    }
+    if let Some(ts) = sb.timestamp {
+        body_dict.set_item("timestamp", ts)?;
+    }
+
+    let body_meta = sb.body_metadata();
+    if !body_meta.is_empty() {
+        let meta_list = PyList::empty(py);
+        for mp in body_meta {
+            let pair = PyDict::new(py);
+            pair.set_item("key", mp.key)?;
+            pair.set_item("value", mp.value)?;
+            meta_list.append(pair)?;
+        }
+        body_dict.set_item("meta", meta_list)?;
+    }
+
+    let var_list = PyList::empty(py);
+    for var in sb.variables.as_slice() {
+        let var_dict = PyDict::new(py);
+        var_dict.set_item("name", var.name)?;
+        var_dict.set_item("operator", operator_str(&var.operator))?;
+
+        let value_dict = PyDict::new(py);
+        match &var.value {
+            Value::Number(s) => {
+                value_dict.set_item("type", "number")?;
+                value_dict.set_item("str_value", *s)?;
+            }
+            Value::String(s) => {
+                value_dict.set_item("type", "string")?;
+                value_dict.set_item("str_value", *s)?;
+            }
+            Value::Boolean(b) => {
+                value_dict.set_item("type", "boolean")?;
+                value_dict.set_item("bool_value", *b)?;
+            }
+            Value::Location { lat, lng, alt } => {
+                value_dict.set_item("type", "location")?;
+                let loc_dict = PyDict::new(py);
+                loc_dict.set_item("lat", *lat)?;
+                loc_dict.set_item("lng", *lng)?;
+                if let Some(a) = alt {
+                    loc_dict.set_item("alt", *a)?;
+                }
+                value_dict.set_item("location", loc_dict)?;
+            }
+        }
+        var_dict.set_item("value", value_dict)?;
+
+        if let Some(u) = var.unit {
+            var_dict.set_item("unit", u)?;
+        }
+        if let Some(ts) = var.timestamp {
+            var_dict.set_item("timestamp", ts)?;
+        }
+        if let Some(g) = var.group {
+            var_dict.set_item("group", g)?;
+        }
+
+        let var_meta = sb.variable_metadata(var);
+        if !var_meta.is_empty() {
+            let meta_list = PyList::empty(py);
+            for mp in var_meta {
+                let pair = PyDict::new(py);
+                pair.set_item("key", mp.key)?;
+                pair.set_item("value", mp.value)?;
+                meta_list.append(pair)?;
+            }
+            var_dict.set_item("meta", meta_list)?;
+        }
+
+        var_list.append(var_dict)?;
+    }
+    body_dict.set_item("variables", var_list)?;
+
+    Ok(body_dict)
+}
+
 #[pyfunction]
 fn parse_uplink_native(py: Python<'_>, input: &str) -> PyResult<Py<PyDict>> {
     let frame = parse::parse_uplink(input).map_err(parse_error_to_py)?;
@@ -88,87 +177,7 @@ fn parse_uplink_native(py: Python<'_>, input: &str) -> PyResult<Py<PyDict>> {
 
     match &frame.push_body {
         Some(PushBody::Structured(sb)) => {
-            let body_dict = PyDict::new(py);
-            body_dict.set_item("type", "structured")?;
-
-            if let Some(g) = sb.group {
-                body_dict.set_item("group", g)?;
-            }
-            if let Some(ts) = sb.timestamp {
-                body_dict.set_item("timestamp", ts)?;
-            }
-
-            let body_meta = sb.body_metadata();
-            if !body_meta.is_empty() {
-                let meta_list = PyList::empty(py);
-                for mp in body_meta {
-                    let pair = PyDict::new(py);
-                    pair.set_item("key", mp.key)?;
-                    pair.set_item("value", mp.value)?;
-                    meta_list.append(pair)?;
-                }
-                body_dict.set_item("meta", meta_list)?;
-            }
-
-            let var_list = PyList::empty(py);
-            for var in sb.variables.as_slice() {
-                let var_dict = PyDict::new(py);
-                var_dict.set_item("name", var.name)?;
-                var_dict.set_item("operator", operator_str(&var.operator))?;
-
-                let val_dict = PyDict::new(py);
-                match &var.value {
-                    Value::Number(s) => {
-                        val_dict.set_item("type", "number")?;
-                        val_dict.set_item("str_value", *s)?;
-                    }
-                    Value::String(s) => {
-                        val_dict.set_item("type", "string")?;
-                        val_dict.set_item("str_value", *s)?;
-                    }
-                    Value::Boolean(b) => {
-                        val_dict.set_item("type", "boolean")?;
-                        val_dict.set_item("bool_value", *b)?;
-                    }
-                    Value::Location { lat, lng, alt } => {
-                        val_dict.set_item("type", "location")?;
-                        let loc_dict = PyDict::new(py);
-                        loc_dict.set_item("lat", *lat)?;
-                        loc_dict.set_item("lng", *lng)?;
-                        if let Some(a) = alt {
-                            loc_dict.set_item("alt", *a)?;
-                        }
-                        val_dict.set_item("location", loc_dict)?;
-                    }
-                }
-                var_dict.set_item("value", val_dict)?;
-
-                if let Some(u) = var.unit {
-                    var_dict.set_item("unit", u)?;
-                }
-                if let Some(ts) = var.timestamp {
-                    var_dict.set_item("timestamp", ts)?;
-                }
-                if let Some(g) = var.group {
-                    var_dict.set_item("group", g)?;
-                }
-
-                let var_meta = sb.variable_metadata(var);
-                if !var_meta.is_empty() {
-                    let meta_list = PyList::empty(py);
-                    for mp in var_meta {
-                        let pair = PyDict::new(py);
-                        pair.set_item("key", mp.key)?;
-                        pair.set_item("value", mp.value)?;
-                        meta_list.append(pair)?;
-                    }
-                    var_dict.set_item("meta", meta_list)?;
-                }
-
-                var_list.append(var_dict)?;
-            }
-            body_dict.set_item("variables", var_list)?;
-            dict.set_item("push_body", body_dict)?;
+            dict.set_item("push_body", structured_body_to_dict(py, sb)?)?;
         }
         Some(PushBody::Passthrough(pt)) => {
             let body_dict = PyDict::new(py);

@@ -7,7 +7,7 @@ use std::mem::MaybeUninit;
 
 use tagotip_ffi::*;
 
-const AUTH: &str = "ate2bd319014b24e0a8aca9f00aea4c0d0";
+const AUTH: &str = "4deedd7bab8817ec";
 
 /// Helper: parse an uplink frame via FFI, returning the result code and the frame.
 unsafe fn ffi_parse_uplink_helper(input: &str) -> (i32, TagotipUplinkFrame) {
