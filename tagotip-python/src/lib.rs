@@ -361,7 +361,11 @@ fn is_envelope_native(data: &[u8]) -> bool {
 }
 
 #[pyfunction]
-fn derive_key_native(py: Python<'_>, token: &str, serial: &str) -> PyResult<Py<pyo3::types::PyBytes>> {
+fn derive_key_native(
+    py: Python<'_>,
+    token: &str,
+    serial: &str,
+) -> PyResult<Py<pyo3::types::PyBytes>> {
     let key = tagotip_secure::derive_key(token, serial);
     Ok(pyo3::types::PyBytes::new(py, &key).into())
 }

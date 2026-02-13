@@ -253,8 +253,15 @@ fn test_seal_open_with_derived_key() {
         pull_body: None,
     };
 
-    let envelope =
-        seal_uplink(Method::Push, &frame, 1, auth_hash, key16, CipherSuite::Aes128Ccm).unwrap();
+    let envelope = seal_uplink(
+        Method::Push,
+        &frame,
+        1,
+        auth_hash,
+        key16,
+        CipherSuite::Aes128Ccm,
+    )
+    .unwrap();
     let (_, method, plaintext) = open_envelope(&envelope, key16).unwrap();
     assert_eq!(method, tagotip_secure::EnvelopeMethod::Push);
     assert_eq!(plaintext, b"sensor-01|[temp:=32]");

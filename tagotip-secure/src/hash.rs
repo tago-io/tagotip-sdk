@@ -42,8 +42,8 @@ pub fn derive_device_hash(serial: &str) -> [u8; AUTH_HASH_SIZE] {
 #[must_use]
 pub fn derive_key(token: &str, serial: &str) -> [u8; 32] {
     let hex_part = token.strip_prefix("at").unwrap_or(token);
-    let mut mac = Hmac::<Sha256>::new_from_slice(hex_part.as_bytes())
-        .expect("HMAC accepts any key length");
+    let mut mac =
+        Hmac::<Sha256>::new_from_slice(hex_part.as_bytes()).expect("HMAC accepts any key length");
     mac.update(serial.as_bytes());
     mac.finalize().into_bytes().into()
 }
