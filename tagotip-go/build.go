@@ -153,6 +153,73 @@ func BuildUplink(frame *UplinkFrame) (string, error) {
 	return result, nil
 }
 
+// BuildHeadless serializes a HeadlessFrame for TagoTiP/S.
+// The method determines the output format:
+//   - PUSH: SERIAL|BODY
+//   - PULL: SERIAL|[VARNAME;...]
+//   - PING: SERIAL
+func BuildHeadless(method Method, frame *HeadlessFrame) (string, error) {
+	if frame == nil {
+		return "", fmt.Errorf("tagotip: nil frame")
+	}
+
+	switch method {
+	case MethodPush:
+		if frame.PushBody == nil {
+			return "", fmt.Errorf("tagotip: PUSH headless frame requires push body")
+		}
+		return frame.Serial + "|" + writePushBody(frame.PushBody), nil
+	case MethodPull:
+		if frame.PullBody == nil {
+			return "", fmt.Errorf("tagotip: PULL headless frame requires pull body")
+		}
+		return frame.Serial + "|" + writePullBody(frame.PullBody), nil
+	case MethodPing:
+		return frame.Serial, nil
+	}
+
+	return "", fmt.Errorf("tagotip: unknown method")
+}
+
+// BuildAckInner serializes an AckFrame into a TagoTiP/S inner frame (STATUS[|DETAIL], no ACK| prefix).
+func BuildAckInner(frame *AckFrame) (string, error) {
+	if frame == nil {
+		return "", fmt.Errorf("tagotip: nil frame")
+	}
+
+	var status string
+	switch frame.Status {
+	case AckStatusOk:
+		status = "OK"
+	case AckStatusPong:
+		status = "PONG"
+	case AckStatusCmd:
+		status = "CMD"
+	case AckStatusErr:
+		status = "ERR"
+	}
+
+	if frame.Detail == nil {
+		return status, nil
+	}
+
+	var detailStr string
+	switch frame.Detail.Type {
+	case "count":
+		detailStr = fmt.Sprintf("%d", frame.Detail.Count)
+	case "variables":
+		detailStr = frame.Detail.Text
+	case "command":
+		detailStr = frame.Detail.Text
+	case "error":
+		detailStr = frame.Detail.Text
+	case "raw":
+		detailStr = frame.Detail.Text
+	}
+
+	return status + "|" + detailStr, nil
+}
+
 // BuildAck serializes an AckFrame into a raw frame string.
 func BuildAck(frame *AckFrame) (string, error) {
 	if frame == nil {

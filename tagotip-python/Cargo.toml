@@ -13,6 +13,7 @@ crate-type = ["cdylib"]
 [dependencies]
 pyo3 = { version = "0.25", features = ["extension-module"] }
 tagotip-codec = { path = "../tagotip-codec", features = ["std"] }
+tagotip-secure = { path = "../tagotip-secure", features = ["std", "aes-128-ccm"] }
 
 [lints]
 workspace = true

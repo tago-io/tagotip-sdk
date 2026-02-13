@@ -14,28 +14,30 @@ tagotip-sdk/
   tagotip-arduino/    Arduino/C library
 ```
 
-## FFI Architecture
+## SDK Architecture
 
-All language bindings use `tagotip-codec` (Rust) as the single implementation. No language re-implements parsing or building logic.
+Each SDK has its own implementation strategy:
 
-- **Node**: Uses napi-rs to call tagotip-codec directly from Rust (no C FFI needed).
-- **Go/Python/Arduino**: Use `tagotip-ffi` (C ABI) to call tagotip-codec.
+- **Rust** (`tagotip-codec` + `tagotip-secure`): Reference implementation. `no_std` codec + crypto.
+- **TypeScript** (`tagotip-node`): Pure TypeScript reimplementation of codec + TagoTiP/S (AES-128-CCM via Node.js `crypto`).
+- **Go** (`tagotip-go`): Pure Go reimplementation of codec + TagoTiP/S (AES-128-CCM via `crypto/aes`).
+- **Python** (`tagotip-python`): PyO3 bindings wrapping `tagotip-codec` and `tagotip-secure` for parsing and crypto; pure Python for building.
+- **Arduino** (`tagotip-arduino`): Uses `tagotip-ffi` (C ABI) for codec; standalone pure C for TagoTiP/S crypto.
 
 ```
-tagotip-codec
+tagotip-codec (Rust, reference)
       |
       +---> tagotip-secure (AEAD envelope layer for TagoTiP/S)
-      |
-      +---> tagotip-node (napi-rs — calls Rust directly)
+      |          |
+      |          +---> tagotip-python (PyO3 bindings for parse + crypto)
       |
       +---> tagotip-ffi (cdylib + staticlib)
-                  |
-                  +---> Go (cgo links to .so/.a)
-                  +---> Python (cffi loads .so/.dylib)
-                  +---> Arduino (links .a statically)
+      |          |
+      |          +---> Arduino (links .a statically)
+      |
+      +--- tagotip-node (pure TypeScript reimplementation + TagoTiP/S)
+      +--- tagotip-go (pure Go reimplementation + TagoTiP/S)
 ```
-
-The C header `tagotip-ffi/tagotip.h` declares all public types and functions for Go/Python/Arduino. The Node package has its own Rust crate in `tagotip-node/native/lib.rs` using napi-rs.
 
 ## Protocol Source of Truth
 
@@ -54,6 +56,7 @@ These types exist across all language bindings:
 - **Variable**: `name`, `operator`, `value`, `unit?`, `timestamp?`, `group?`, `meta?`
 - **MetaPair**: `key`, `value`
 - **UplinkFrame**: `method`, `seq?`, `auth`, `serial`, `push_body?`, `pull_body?`
+- **HeadlessFrame**: `serial`, `push_body?`, `pull_body?` (for TagoTiP/S inner frames)
 - **AckFrame**: `seq?`, `status`, `detail?`
 - **AckStatus**: `Ok`, `Pong`, `Cmd`, `Err`
 - **AckDetail**: `Count(u32)`, `Variables(str)`, `Command(str)`, `Error{code,text}`, `Raw(str)`
@@ -143,10 +146,23 @@ is_envelope(data) -> bool
 
 ### Codec additions for TagoTiP/S
 
-The following functions were added to `tagotip-codec` for ACK inner frames (no `ACK|` prefix):
+The following functions exist in all SDKs for headless frame and ACK inner frame support:
 
-- `build_ack_inner(frame, buf) -> Result<usize>` — builds `STATUS[|DETAIL]`
-- `parse_ack_inner(input) -> Result<AckFrame>` — parses `STATUS[|DETAIL]`
+- `parse_headless(method, input)` — parses headless inner frame (SERIAL[|BODY])
+- `build_headless(method, frame)` — builds headless inner frame
+- `parse_ack_inner(input)` — parses `STATUS[|DETAIL]` (no `ACK|` prefix)
+- `build_ack_inner(frame)` — builds `STATUS[|DETAIL]`
+
+### TagoTiP/S in non-Rust SDKs
+
+All non-Rust SDKs support TagoTiP/S with AES-128-CCM (cipher suite 0):
+
+| SDK | Implementation | API |
+|-----|---------------|-----|
+| **TypeScript** | Pure TS via Node.js `crypto` | `deriveAuthHash`, `deriveDeviceHash`, `sealUplink`, `openEnvelope`, `parseEnvelopeHeader`, `isEnvelope` |
+| **Go** | Pure Go via `crypto/aes` + custom CCM | `DeriveAuthHash`, `DeriveDeviceHash`, `SealUplink`, `OpenEnvelope`, `ParseEnvelopeHeader`, `IsEnvelope` |
+| **Python** | PyO3 bindings wrapping `tagotip-secure` | `derive_auth_hash`, `derive_device_hash`, `seal_uplink`, `open_envelope`, `parse_envelope_header`, `is_envelope` |
+| **Arduino/C** | Standalone pure C (SHA-256 + AES-128-CCM) | `tagotips_*` functions in `tagotips.h` |
 
 ## tagotip-arduino/tagotips (TagoTiP/S Pure C)
 
@@ -193,7 +209,7 @@ All README.md files must include the TagoIO logo header at the top, before the t
 ## Coding Conventions
 
 - **Rust**: Edition 2024, `no_std` for codec and crypto, `#![forbid(unsafe_op_in_unsafe_fn)]`
-- **TypeScript**: Strict mode, ES2022, Bundler module resolution, `.ts` import extensions, `tsdown` bundler, napi-rs for native addon
+- **TypeScript**: Strict mode, ES2022, Bundler module resolution, `.ts` import extensions, `tsdown` bundler, pure TypeScript (no native addons)
 - **Go**: Standard `go fmt`, modules
 - **Python**: Python 3.10+, dataclasses, type hints
 - **C/Arduino**: C99, `#ifndef` guard macros

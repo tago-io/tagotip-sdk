@@ -5,5 +5,6 @@ export const MAX_SERIAL_LEN = 100;
 export const MAX_GROUP_LEN = 100;
 export const MAX_META_KEY_LEN = 100;
 export const MAX_UNIT_LEN = 25;
+export const MAX_TOTAL_META = 512;
 export const MAX_FRAME_SIZE = 16_384;
 export const AUTH_HASH_LEN = 16;

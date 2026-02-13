@@ -18,6 +18,7 @@ import {
 import type {
   UplinkFrame,
   AckFrame,
+  HeadlessFrame,
   PushBody,
   PullBody,
   StructuredBody,
@@ -712,6 +713,49 @@ function parseAckDetail(s: string, status: AckStatus): AckDetail {
       return { type: "error", code, text: s };
     }
   }
+}
+
+export function parseHeadless(method: Method, input: string): HeadlessFrame {
+  switch (method) {
+    case Method.Push: {
+      const pipePos = findUnescapedChar(input, "|");
+      if (pipePos === -1) fail("missing_body", 0);
+      const serial = input.slice(0, pipePos);
+      validateSerial(serial, 0);
+      const body = input.slice(pipePos + 1);
+      const pushBody = parsePushBody(body, pipePos + 1);
+      return { serial, pushBody };
+    }
+    case Method.Pull: {
+      const pipePos = findUnescapedChar(input, "|");
+      if (pipePos === -1) fail("missing_body", 0);
+      const serial = input.slice(0, pipePos);
+      validateSerial(serial, 0);
+      const body = input.slice(pipePos + 1);
+      const pullBody = parsePullBody(body, pipePos + 1);
+      return { serial, pullBody };
+    }
+    case Method.Ping: {
+      validateSerial(input, 0);
+      return { serial: input };
+    }
+  }
+}
+
+export function parseAckInner(input: string): AckFrame {
+  const fields = splitFields(input);
+  if (fields.length === 0 || fields[0].length === 0) fail("invalid_ack", 0);
+
+  const status = parseAckStatus(fields[0]);
+  let detail: AckDetail | undefined;
+
+  if (fields.length > 1) {
+    detail = parseAckDetail(fields[1], status);
+  }
+
+  const frame: AckFrame = { status };
+  if (detail !== undefined) frame.detail = detail;
+  return frame;
 }
 
 function parseErrorCode(s: string): ErrorCode {

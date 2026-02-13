@@ -7,6 +7,7 @@ import {
 import type {
   UplinkFrame,
   AckFrame,
+  HeadlessFrame,
   PushBody,
   PullBody,
   StructuredBody,
@@ -115,6 +116,54 @@ export function buildUplink(frame: UplinkFrame): string {
   }
 
   return result;
+}
+
+export function buildHeadless(method: Method, frame: HeadlessFrame): string {
+  switch (method) {
+    case Method.Push: {
+      if (!frame.pushBody) throw new Error("tagotip: PUSH headless frame requires push body");
+      return `${frame.serial}|${writePushBody(frame.pushBody)}`;
+    }
+    case Method.Pull: {
+      if (!frame.pullBody) throw new Error("tagotip: PULL headless frame requires pull body");
+      return `${frame.serial}|${writePullBody(frame.pullBody)}`;
+    }
+    case Method.Ping:
+      return frame.serial;
+  }
+}
+
+export function buildAckInner(frame: AckFrame): string {
+  let status: string;
+  switch (frame.status) {
+    case AckStatus.Ok: status = "OK"; break;
+    case AckStatus.Pong: status = "PONG"; break;
+    case AckStatus.Cmd: status = "CMD"; break;
+    case AckStatus.Err: status = "ERR"; break;
+  }
+
+  if (frame.detail === undefined) return status;
+
+  let detailStr: string;
+  switch (frame.detail.type) {
+    case "count":
+      detailStr = String(frame.detail.count);
+      break;
+    case "variables":
+      detailStr = frame.detail.raw;
+      break;
+    case "command":
+      detailStr = frame.detail.command;
+      break;
+    case "error":
+      detailStr = frame.detail.text;
+      break;
+    case "raw":
+      detailStr = frame.detail.text;
+      break;
+  }
+
+  return `${status}|${detailStr}`;
 }
 
 export function buildAck(frame: AckFrame): string {

@@ -123,6 +123,15 @@ type UplinkFrame struct {
 	PullBody *PullBody
 }
 
+// HeadlessFrame represents a headless inner frame for TagoTiP/S.
+// It contains only serial and body — method, auth, and counter are
+// carried by the envelope header.
+type HeadlessFrame struct {
+	Serial   string
+	PushBody *PushBody
+	PullBody *PullBody
+}
+
 // AckDetail represents the detail in an ACK frame.
 type AckDetail struct {
 	Type      string // "count", "variables", "command", "error", "raw"

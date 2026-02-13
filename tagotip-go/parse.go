@@ -929,6 +929,82 @@ func parseAckDetail(s string, status AckStatus) *AckDetail {
 	return &AckDetail{Type: "raw", Text: s}
 }
 
+// ParseHeadless parses a headless inner frame (for TagoTiP/S).
+// The method determines the expected format:
+//   - PUSH: SERIAL|BODY
+//   - PULL: SERIAL|[VARNAME;...]
+//   - PING: SERIAL
+func ParseHeadless(method Method, input string) (*HeadlessFrame, error) {
+	frame := &HeadlessFrame{}
+
+	switch method {
+	case MethodPush:
+		pipePos := findUnescapedChar(input, '|', 0)
+		if pipePos == -1 {
+			return nil, fail(ErrMissingBody, 0)
+		}
+		serial := input[:pipePos]
+		if err := validateSerial(serial, 0); err != nil {
+			return nil, err
+		}
+		frame.Serial = serial
+		body := input[pipePos+1:]
+		pb, err := parsePushBody(body, pipePos+1)
+		if err != nil {
+			return nil, err
+		}
+		frame.PushBody = pb
+
+	case MethodPull:
+		pipePos := findUnescapedChar(input, '|', 0)
+		if pipePos == -1 {
+			return nil, fail(ErrMissingBody, 0)
+		}
+		serial := input[:pipePos]
+		if err := validateSerial(serial, 0); err != nil {
+			return nil, err
+		}
+		frame.Serial = serial
+		body := input[pipePos+1:]
+		pb, err := parsePullBody(body, pipePos+1)
+		if err != nil {
+			return nil, err
+		}
+		frame.PullBody = pb
+
+	case MethodPing:
+		if err := validateSerial(input, 0); err != nil {
+			return nil, err
+		}
+		frame.Serial = input
+	}
+
+	return frame, nil
+}
+
+// ParseAckInner parses a TagoTiP/S ACK inner frame (STATUS[|DETAIL], no ACK| prefix).
+func ParseAckInner(input string) (*AckFrame, error) {
+	fields := splitFields(input)
+	if len(fields) == 0 || len(fields[0]) == 0 {
+		return nil, fail(ErrInvalidAck, 0)
+	}
+
+	status, err := parseAckStatus(fields[0])
+	if err != nil {
+		return nil, err
+	}
+
+	var detail *AckDetail
+	if len(fields) > 1 {
+		detail = parseAckDetail(fields[1], status)
+	}
+
+	return &AckFrame{
+		Status: status,
+		Detail: detail,
+	}, nil
+}
+
 func parseErrorCodeStr(s string) ErrorCode {
 	switch s {
 	case "invalid_token":

@@ -4,3 +4,5 @@
 *.bin
 *.hex
 build/
+test_parse
+test_crypto

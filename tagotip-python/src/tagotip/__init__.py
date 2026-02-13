@@ -20,6 +20,16 @@ from tagotip.types import (
 )
 from tagotip.parse import parse_uplink, parse_ack
 from tagotip.build import build_uplink, build_ack
+from tagotip.secure import (
+    EnvelopeHeader,
+    OpenResult,
+    derive_auth_hash,
+    derive_device_hash,
+    seal_uplink as seal_uplink_secure,
+    open_envelope,
+    parse_envelope_header,
+    is_envelope,
+)
 
 __all__ = [
     "Method",
@@ -42,4 +52,12 @@ __all__ = [
     "parse_ack",
     "build_uplink",
     "build_ack",
+    "EnvelopeHeader",
+    "OpenResult",
+    "derive_auth_hash",
+    "derive_device_hash",
+    "seal_uplink_secure",
+    "open_envelope",
+    "parse_envelope_header",
+    "is_envelope",
 ]

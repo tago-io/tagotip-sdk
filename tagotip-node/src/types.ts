@@ -112,6 +112,15 @@ export interface UplinkFrame {
   pullBody?: PullBody;
 }
 
+/** Headless inner frame for TagoTiP/S.
+ *  Contains only serial and body -- method, auth, and counter
+ *  are carried by the envelope header. */
+export interface HeadlessFrame {
+  serial: string;
+  pushBody?: PushBody;
+  pullBody?: PullBody;
+}
+
 /** ACK detail variants. */
 export type AckDetail =
   | { type: "count"; count: number }
