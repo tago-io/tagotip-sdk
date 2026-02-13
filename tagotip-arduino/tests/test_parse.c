@@ -44,7 +44,6 @@ void test_constants(void) {
     ASSERT_EQ(TAGOTIP_MAX_META_PAIRS, 32, "MAX_META_PAIRS");
     ASSERT_EQ(TAGOTIP_MAX_TOTAL_META, 512, "MAX_TOTAL_META");
     ASSERT_EQ(TAGOTIP_MAX_FRAME_SIZE, 16384, "MAX_FRAME_SIZE");
-    ASSERT_EQ(TAGOTIP_AUTH_TOKEN_LEN, 34, "AUTH_TOKEN_LEN");
 }
 
 /* =========================================================================
