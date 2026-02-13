@@ -1,4 +1,12 @@
+<br/>
+<p align="center">
+  <img src="https://assets.tago.io/tagoio/tagoio.png" width="250px" alt="TagoIO"></img>
+</p>
+
 # tagotip-secure
+
+[![crates.io](https://img.shields.io/crates/v/tagotip-secure.svg)](https://crates.io/crates/tagotip-secure)
+[![docs.rs](https://docs.rs/tagotip-secure/badge.svg)](https://docs.rs/tagotip-secure)
 
 A `no_std` Rust AEAD crypto envelope for the [TagoTiP/S protocol](https://github.com/tago-io/tagotip-sdk/tree/main/protocol) — encrypt and authenticate TagoTiP frames with pluggable cipher suites.
 

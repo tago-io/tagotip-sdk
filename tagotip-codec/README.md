@@ -1,4 +1,12 @@
+<br/>
+<p align="center">
+  <img src="https://assets.tago.io/tagoio/tagoio.png" width="250px" alt="TagoIO"></img>
+</p>
+
 # tagotip-codec
+
+[![crates.io](https://img.shields.io/crates/v/tagotip-codec.svg)](https://crates.io/crates/tagotip-codec)
+[![docs.rs](https://docs.rs/tagotip-codec/badge.svg)](https://docs.rs/tagotip-codec)
 
 A `no_std` Rust codec for the [TagoTiP protocol](https://github.com/tago-io/tagotip-sdk/tree/main/protocol) — parse and build uplink/downlink frames with zero heap allocation.
 
@@ -18,10 +26,11 @@ use tagotip_codec::build::build_uplink;
 use tagotip_codec::types::*;
 
 // Parse an uplink frame
-let input = "PUSH|ate2bd319014b24e0a8aca9f00aea4c0d0|sensor_01|[temperature:=32;humidity:=65]";
+let input = "PUSH|4deedd7bab8817ec|sensor_01|[temperature:=32;humidity:=65]";
 let frame = parse_uplink(input).unwrap();
 
 assert_eq!(frame.method, Method::Push);
+assert_eq!(frame.auth, "4deedd7bab8817ec");
 assert_eq!(frame.serial, "sensor_01");
 
 if let Some(PushBody::Structured(body)) = &frame.push_body {

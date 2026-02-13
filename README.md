@@ -1,3 +1,8 @@
+<br/>
+<p align="center">
+  <img src="https://assets.tago.io/tagoio/tagoio.png" width="250px" alt="TagoIO"></img>
+</p>
+
 # TagoTiP SDK Libraries
 
 Multi-language SDK bindings for the [TagoTiP protocol](protocol/TagoTiP.md) — a compact, text-based IoT transport protocol by [TagoIO](https://tago.io).
