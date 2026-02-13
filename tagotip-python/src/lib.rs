@@ -250,9 +250,125 @@ fn parse_ack_native(py: Python<'_>, input: &str) -> PyResult<Py<PyDict>> {
     Ok(dict.into())
 }
 
+// ---------------------------------------------------------------------------
+// TagoTiP/S crypto bindings
+// ---------------------------------------------------------------------------
+
+fn crypto_error_to_py(e: tagotip_secure::CryptoError) -> PyErr {
+    PyValueError::new_err(format!("tagotips: {}", e))
+}
+
+#[pyfunction]
+fn derive_auth_hash_native(py: Python<'_>, token: &str) -> PyResult<Py<pyo3::types::PyBytes>> {
+    let hash = tagotip_secure::derive_auth_hash(token);
+    Ok(pyo3::types::PyBytes::new(py, &hash).into())
+}
+
+#[pyfunction]
+fn derive_device_hash_native(py: Python<'_>, serial: &str) -> PyResult<Py<pyo3::types::PyBytes>> {
+    let hash = tagotip_secure::derive_device_hash(serial);
+    Ok(pyo3::types::PyBytes::new(py, &hash).into())
+}
+
+#[pyfunction]
+fn seal_uplink_native(
+    py: Python<'_>,
+    method: u8,
+    inner_frame: &[u8],
+    counter: u32,
+    auth_hash: &[u8],
+    device_hash: &[u8],
+    key: &[u8],
+) -> PyResult<Py<pyo3::types::PyBytes>> {
+    if auth_hash.len() != 8 {
+        return Err(PyValueError::new_err("auth_hash must be 8 bytes"));
+    }
+    if device_hash.len() != 8 {
+        return Err(PyValueError::new_err("device_hash must be 8 bytes"));
+    }
+
+    let mut ah = [0u8; 8];
+    ah.copy_from_slice(auth_hash);
+    let mut dh = [0u8; 8];
+    dh.copy_from_slice(device_hash);
+
+    let envelope_method =
+        tagotip_secure::EnvelopeMethod::from_id(method).map_err(crypto_error_to_py)?;
+
+    let codec_method = envelope_method.to_codec_method();
+    if codec_method.is_none() && method != 3 {
+        return Err(PyValueError::new_err("invalid method for uplink"));
+    }
+
+    let envelope = tagotip_secure::seal_raw(
+        inner_frame,
+        envelope_method,
+        counter,
+        ah,
+        dh,
+        key,
+        tagotip_secure::CipherSuite::Aes128Ccm,
+    )
+    .map_err(crypto_error_to_py)?;
+
+    Ok(pyo3::types::PyBytes::new(py, &envelope).into())
+}
+
+#[pyfunction]
+fn open_envelope_native(py: Python<'_>, envelope: &[u8], key: &[u8]) -> PyResult<Py<PyDict>> {
+    let (header, method, plaintext) =
+        tagotip_secure::open_envelope(envelope, key).map_err(crypto_error_to_py)?;
+
+    let dict = PyDict::new(py);
+    dict.set_item("flags", header.flags)?;
+    dict.set_item("counter", header.counter)?;
+    dict.set_item(
+        "auth_hash",
+        pyo3::types::PyBytes::new(py, &header.auth_hash),
+    )?;
+    dict.set_item(
+        "device_hash",
+        pyo3::types::PyBytes::new(py, &header.device_hash),
+    )?;
+    dict.set_item("method", method.id())?;
+    dict.set_item("plaintext", pyo3::types::PyBytes::new(py, &plaintext))?;
+
+    Ok(dict.into())
+}
+
+#[pyfunction]
+fn parse_envelope_header_native(py: Python<'_>, envelope: &[u8]) -> PyResult<Py<PyDict>> {
+    let header = tagotip_secure::parse_envelope_header(envelope).map_err(crypto_error_to_py)?;
+
+    let dict = PyDict::new(py);
+    dict.set_item("flags", header.flags)?;
+    dict.set_item("counter", header.counter)?;
+    dict.set_item(
+        "auth_hash",
+        pyo3::types::PyBytes::new(py, &header.auth_hash),
+    )?;
+    dict.set_item(
+        "device_hash",
+        pyo3::types::PyBytes::new(py, &header.device_hash),
+    )?;
+
+    Ok(dict.into())
+}
+
+#[pyfunction]
+fn is_envelope_native(data: &[u8]) -> bool {
+    tagotip_secure::is_envelope(data)
+}
+
 #[pymodule]
 fn _tagotip_native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parse_uplink_native, m)?)?;
     m.add_function(wrap_pyfunction!(parse_ack_native, m)?)?;
+    m.add_function(wrap_pyfunction!(derive_auth_hash_native, m)?)?;
+    m.add_function(wrap_pyfunction!(derive_device_hash_native, m)?)?;
+    m.add_function(wrap_pyfunction!(seal_uplink_native, m)?)?;
+    m.add_function(wrap_pyfunction!(open_envelope_native, m)?)?;
+    m.add_function(wrap_pyfunction!(parse_envelope_header_native, m)?)?;
+    m.add_function(wrap_pyfunction!(is_envelope_native, m)?)?;
     Ok(())
 }

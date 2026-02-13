@@ -8,7 +8,7 @@ from tagotip import (
     StructuredBody, PassthroughBody, Variable, Value, LocationValue, MetaPair,
 )
 
-AUTH = "at0123456789abcdef0123456789abcdef"
+AUTH = "4deedd7bab8817ec"
 
 
 # =========================================================================

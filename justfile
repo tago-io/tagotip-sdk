@@ -70,7 +70,7 @@ go-test:
 
 # Run Python tests
 python-test:
-    cd tagotip-python && python -m pytest tests/
+    cd tagotip-python && uv run pytest tests/
 
 # ─── Arduino ─────────────────────────────────────────────────
 

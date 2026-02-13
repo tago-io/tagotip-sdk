@@ -42,7 +42,7 @@ def test_uplink_frame_construction():
     """Verify UplinkFrame can be constructed."""
     frame = UplinkFrame(
         method=Method.PUSH,
-        auth="at0123456789abcdef0123456789abcdef",
+        auth="4deedd7bab8817ec",
         serial="my-device",
     )
     assert frame.method == Method.PUSH
@@ -168,7 +168,7 @@ def test_uplink_frame_push_structured():
     """Verify full structured body construction."""
     frame = UplinkFrame(
         method=Method.PUSH,
-        auth="at0123456789abcdef0123456789abcdef",
+        auth="4deedd7bab8817ec",
         serial="sensor_01",
         push_body=PushBody(
             structured=StructuredBody(
@@ -204,7 +204,7 @@ def test_uplink_frame_push_passthrough():
     """Verify passthrough body construction."""
     frame = UplinkFrame(
         method=Method.PUSH,
-        auth="at0123456789abcdef0123456789abcdef",
+        auth="4deedd7bab8817ec",
         serial="sensor_01",
         push_body=PushBody(
             passthrough=PassthroughBody(
@@ -223,7 +223,7 @@ def test_uplink_frame_pull():
     """Verify PULL frame construction."""
     frame = UplinkFrame(
         method=Method.PULL,
-        auth="at0123456789abcdef0123456789abcdef",
+        auth="4deedd7bab8817ec",
         serial="weather_denver",
         pull_body=PullBody(variables=["temperature", "humidity"]),
     )
@@ -237,7 +237,7 @@ def test_uplink_frame_ping():
     """Verify PING frame construction (no body)."""
     frame = UplinkFrame(
         method=Method.PING,
-        auth="at0123456789abcdef0123456789abcdef",
+        auth="4deedd7bab8817ec",
         serial="sensor_01",
     )
     assert frame.method == Method.PING

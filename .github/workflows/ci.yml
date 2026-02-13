@@ -80,28 +80,25 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.8.x"
+
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Create virtualenv and install tools
+      - name: Install dependencies
         working-directory: tagotip-python
-        run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install maturin pytest
+        run: uv sync --dev
 
       - name: Build and install
         working-directory: tagotip-python
-        run: |
-          source .venv/bin/activate
-          maturin develop
+        run: uv run maturin develop
 
       - name: Test
         working-directory: tagotip-python
-        run: |
-          source .venv/bin/activate
-          pytest tests/
+        run: uv run pytest tests/
 
   arduino:
     name: Arduino (C test)
