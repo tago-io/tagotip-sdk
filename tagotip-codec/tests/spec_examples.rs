@@ -91,7 +91,7 @@ fn spec_11_5_metadata() {
 #[test]
 fn spec_11_6_body_defaults() {
     let input = format!(
-        "PUSH|{AUTH}|sensor_01|^batch_42@1694567890000{{firmware=2.1}}[temperature:=32#C;humidity:=65#%]"
+        "PUSH|{AUTH}|sensor_01|@1694567890000^batch_42{{firmware=2.1}}[temperature:=32#C;humidity:=65#%]"
     );
     let frame = parse_uplink(&input).unwrap();
     let body = match frame.push_body.unwrap() {

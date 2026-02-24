@@ -697,7 +697,7 @@ fn auth_uppercase_hex_accepted() {
 
 #[test]
 fn body_modifiers_all_three() {
-    let input = format!("PUSH|{AUTH}|sensor_01|^group_01@1694567890000{{firmware=2.1}}[temp:=32]");
+    let input = format!("PUSH|{AUTH}|sensor_01|@1694567890000^group_01{{firmware=2.1}}[temp:=32]");
     let frame = parse_uplink(&input).unwrap();
     let body = match frame.push_body.unwrap() {
         PushBody::Structured(s) => s,
@@ -751,9 +751,10 @@ fn body_meta_only() {
 
 #[test]
 fn body_group_after_timestamp_rejected() {
-    // Modifiers must be in order: ^group @timestamp {meta}
-    let input = format!("PUSH|{AUTH}|sensor_01|@1694567890000^group_01[temp:=32]");
-    assert_parse_err(&input, ParseErrorKind::InvalidModifier);
+    // Modifiers must be in order: @timestamp ^group {meta}
+    // ^group before @timestamp is rejected during group validation (@ is not a valid group char)
+    let input = format!("PUSH|{AUTH}|sensor_01|^group_01@1694567890000[temp:=32]");
+    assert_parse_err(&input, ParseErrorKind::InvalidField);
 }
 
 // =========================================================================

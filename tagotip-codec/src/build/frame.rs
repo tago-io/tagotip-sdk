@@ -158,13 +158,13 @@ impl<'buf> FrameWriter<'buf> {
         body_meta: Option<MetaRange>,
         meta_pool: &[MetaPair<'_>],
     ) -> Result<(), BuildError> {
-        if let Some(g) = group {
-            self.write_byte(b'^')?;
-            self.write_str(g)?;
-        }
         if let Some(ts) = timestamp {
             self.write_byte(b'@')?;
             self.write_str(ts)?;
+        }
+        if let Some(g) = group {
+            self.write_byte(b'^')?;
+            self.write_str(g)?;
         }
         if let Some(range) = body_meta {
             let start = range.start as usize;

@@ -145,7 +145,7 @@ func TestBuildRoundTripPassthroughBase64(t *testing.T) {
 }
 
 func TestBuildRoundTripBodyModifiers(t *testing.T) {
-	input := "PUSH|" + testAuth + "|dev|^batch@1694567890000{source=dht22}[temp:=32]"
+	input := "PUSH|" + testAuth + "|dev|@1694567890000^batch{source=dht22}[temp:=32]"
 	frame, err := ParseUplink(input)
 	if err != nil {
 		t.Fatal(err)

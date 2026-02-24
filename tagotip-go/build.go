@@ -92,13 +92,13 @@ func writePushBody(body *PushBody) string {
 	}
 
 	var b strings.Builder
-	if sb.Group != nil {
-		b.WriteByte('^')
-		b.WriteString(*sb.Group)
-	}
 	if sb.Timestamp != nil {
 		b.WriteByte('@')
 		b.WriteString(*sb.Timestamp)
+	}
+	if sb.Group != nil {
+		b.WriteByte('^')
+		b.WriteString(*sb.Group)
 	}
 	if len(sb.Meta) > 0 {
 		b.WriteString(writeMetaPairs(sb.Meta))

@@ -69,8 +69,8 @@ function writePushBody(body: PushBody): string {
   let s = "";
 
   // Body-level modifiers
-  if (sb.group !== undefined) s += `^${sb.group}`;
   if (sb.timestamp !== undefined) s += `@${sb.timestamp}`;
+  if (sb.group !== undefined) s += `^${sb.group}`;
   if (sb.meta !== undefined && sb.meta.length > 0) s += writeMetaPairs(sb.meta);
 
   // Variables

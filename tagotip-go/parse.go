@@ -547,36 +547,36 @@ func parseBodyModifiers(s string, basePos int) (bodyModifiers, error) {
 	var group *string
 	var timestamp *string
 	var meta []MetaPair
-	phase := 0 // 0=^, 1=@, 2={, 3=done
+	phase := 0 // 0=@, 1=^, 2={, 3=done
 
 	for pos < len(s) {
 		ch := s[pos]
 		switch ch {
-		case '^':
+		case '@':
 			if phase > 0 {
 				return bodyModifiers{}, fail(ErrInvalidModifier, basePos+pos)
 			}
 			pos++
 			start := pos
-			pos = scanUntilAny(s, pos, "@{")
-			g := s[start:pos]
-			if err := validateGroup(g, basePos+start); err != nil {
+			pos = scanUntilAny(s, pos, "^{")
+			ts := s[start:pos]
+			if err := validateDigits(ts, basePos+start); err != nil {
 				return bodyModifiers{}, err
 			}
-			group = &g
+			timestamp = &ts
 			phase = 1
-		case '@':
+		case '^':
 			if phase > 1 {
 				return bodyModifiers{}, fail(ErrInvalidModifier, basePos+pos)
 			}
 			pos++
 			start := pos
 			pos = scanUntilAny(s, pos, "{")
-			ts := s[start:pos]
-			if err := validateDigits(ts, basePos+start); err != nil {
+			g := s[start:pos]
+			if err := validateGroup(g, basePos+start); err != nil {
 				return bodyModifiers{}, err
 			}
-			timestamp = &ts
+			group = &g
 			phase = 2
 		case '{':
 			if phase > 2 {

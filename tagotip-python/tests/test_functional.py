@@ -75,7 +75,7 @@ def test_parse_push_metadata():
 
 
 def test_parse_push_body_modifiers():
-    f = parse_uplink(f"PUSH|{AUTH}|dev|^batch@1694567890000{{source=dht22}}[temp:=32]")
+    f = parse_uplink(f"PUSH|{AUTH}|dev|@1694567890000^batch{{source=dht22}}[temp:=32]")
     sb = f.push_body.structured
     assert sb.group == "batch"
     assert sb.timestamp == "1694567890000"

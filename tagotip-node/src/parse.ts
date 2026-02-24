@@ -441,27 +441,27 @@ function parseBodyModifiers(s: string, basePos: number): BodyModifiers {
   let group: string | undefined;
   let timestamp: string | undefined;
   let meta: MetaPair[] | undefined;
-  let phase = 0; // 0=^, 1=@, 2={, 3=done
+  let phase = 0; // 0=@, 1=^, 2={, 3=done
 
   while (pos < s.length) {
     const ch = s[pos];
-    if (ch === "^") {
+    if (ch === "@") {
       if (phase > 0) fail("invalid_modifier", basePos + pos);
       pos += 1;
       const start = pos;
-      pos = scanUntilAny(s, pos, "@{");
-      const g = s.slice(start, pos);
-      validateGroup(g, basePos + start);
-      group = g;
+      pos = scanUntilAny(s, pos, "^{");
+      const ts = s.slice(start, pos);
+      validateDigits(ts, basePos + start);
+      timestamp = ts;
       phase = 1;
-    } else if (ch === "@") {
+    } else if (ch === "^") {
       if (phase > 1) fail("invalid_modifier", basePos + pos);
       pos += 1;
       const start = pos;
       pos = scanUntilAny(s, pos, "{");
-      const ts = s.slice(start, pos);
-      validateDigits(ts, basePos + start);
-      timestamp = ts;
+      const g = s.slice(start, pos);
+      validateGroup(g, basePos + start);
+      group = g;
       phase = 2;
     } else if (ch === "{") {
       if (phase > 2) fail("invalid_modifier", basePos + pos);

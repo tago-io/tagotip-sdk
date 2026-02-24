@@ -148,7 +148,7 @@ describe("parseUplink — happy path", () => {
 
   it("parse push with body-level modifiers", () => {
     const frame = parseUplink(
-      `PUSH|${AUTH}|sensor_01|^batch_42@1694567890000{firmware=2.1}[temp:=32#C;humidity:=65#%]`
+      `PUSH|${AUTH}|sensor_01|@1694567890000^batch_42{firmware=2.1}[temp:=32#C;humidity:=65#%]`
     );
     if (frame.pushBody!.type === "structured") {
       const body = frame.pushBody!.body;
@@ -364,11 +364,11 @@ describe("parseUplink — error cases", () => {
     );
   });
 
-  it("rejects body group after timestamp", () => {
+  it("rejects body group before timestamp", () => {
     assert.throws(
       () =>
         parseUplink(
-          `PUSH|${AUTH}|sensor_01|@1694567890000^group_01[temp:=32]`
+          `PUSH|${AUTH}|sensor_01|^group_01@1694567890000[temp:=32]`
         ),
       TagotipError
     );
@@ -639,7 +639,7 @@ describe("buildUplink — round-trip", () => {
 
   it("round-trip push body modifiers", () => {
     roundtrip(
-      `PUSH|${AUTH}|sensor_01|^group_01@1694567890000{firmware=2.1}[temp:=32]`
+      `PUSH|${AUTH}|sensor_01|@1694567890000^group_01{firmware=2.1}[temp:=32]`
     );
   });
 
@@ -772,7 +772,7 @@ describe("spec §11 examples", () => {
 
   it("§11.6 body-level defaults", () => {
     const frame = parseUplink(
-      `PUSH|${AUTH}|sensor_01|^batch_42@1694567890000{firmware=2.1}[temperature:=32#C;humidity:=65#%]`
+      `PUSH|${AUTH}|sensor_01|@1694567890000^batch_42{firmware=2.1}[temperature:=32#C;humidity:=65#%]`
     );
     if (frame.pushBody?.type === "structured") {
       const body = frame.pushBody.body;

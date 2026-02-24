@@ -102,7 +102,7 @@ fn push_with_metadata() {
 #[test]
 fn push_body_level_modifiers() {
     let input = format!(
-        "PUSH|{AUTH}|sensor_01|^batch_42@1694567890000{{firmware=2.1}}[temperature:=32#C;humidity:=65#%]"
+        "PUSH|{AUTH}|sensor_01|@1694567890000^batch_42{{firmware=2.1}}[temperature:=32#C;humidity:=65#%]"
     );
     let frame = parse_uplink(&input).unwrap();
     let body = match frame.push_body.unwrap() {
@@ -200,7 +200,7 @@ fn push_unit_with_location_rejected() {
 
 #[test]
 fn push_body_modifiers_out_of_order_rejected() {
-    let input = format!("PUSH|{AUTH}|dev1|@1694567890000^batch_42[temp:=32]");
+    let input = format!("PUSH|{AUTH}|dev1|^batch_42@1694567890000[temp:=32]");
     assert!(parse_uplink(&input).is_err());
 }
 

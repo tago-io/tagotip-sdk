@@ -300,7 +300,7 @@ fn roundtrip_headless_push() {
 #[test]
 fn roundtrip_body_modifiers() {
     roundtrip_uplink(&format!(
-        "PUSH|{AUTH}|sensor_01|^batch_42@1694567890000{{firmware=2.1}}[temperature:=32#C;humidity:=65#%]"
+        "PUSH|{AUTH}|sensor_01|@1694567890000^batch_42{{firmware=2.1}}[temperature:=32#C;humidity:=65#%]"
     ));
 }
 

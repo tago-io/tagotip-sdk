@@ -186,7 +186,7 @@ func TestParsePushMetadata(t *testing.T) {
 }
 
 func TestParsePushBodyModifiers(t *testing.T) {
-	frame, err := ParseUplink("PUSH|" + testAuth + "|dev|^batch@1694567890000{source=dht22}[temp:=32]")
+	frame, err := ParseUplink("PUSH|" + testAuth + "|dev|@1694567890000^batch{source=dht22}[temp:=32]")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -404,8 +404,8 @@ func TestRejectMetaMissingEquals(t *testing.T) {
 }
 
 func TestRejectBodyGroupAfterTimestamp(t *testing.T) {
-	_, err := ParseUplink("PUSH|" + testAuth + "|dev|@123^group[x:=1]")
-	assertParseError(t, err, ErrInvalidModifier)
+	_, err := ParseUplink("PUSH|" + testAuth + "|dev|^group@123[x:=1]")
+	assertParseError(t, err, ErrInvalidVariable)
 }
 
 func TestRejectLocation4Components(t *testing.T) {
@@ -770,7 +770,7 @@ func TestSpec11_5(t *testing.T) {
 }
 
 func TestSpec11_6(t *testing.T) {
-	_, err := ParseUplink("PUSH|" + testAuth + "|sensor_01|^batch_01@1694567890000[temperature:=32;humidity:=65]")
+	_, err := ParseUplink("PUSH|" + testAuth + "|sensor_01|@1694567890000^batch_01[temperature:=32;humidity:=65]")
 	if err != nil {
 		t.Fatal(err)
 	}

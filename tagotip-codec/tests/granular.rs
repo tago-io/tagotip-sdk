@@ -205,7 +205,7 @@ fn parse_push_body_passthrough_hex() {
 
 #[test]
 fn parse_push_body_with_modifiers() {
-    let body = parse_push_body("^batch_01@1694567890000{fw=2.1}[temp:=32]").unwrap();
+    let body = parse_push_body("@1694567890000^batch_01{fw=2.1}[temp:=32]").unwrap();
     match body {
         PushBody::Structured(s) => {
             assert_eq!(s.group, Some("batch_01"));
@@ -376,7 +376,7 @@ fn roundtrip_pull_body() {
 
 #[test]
 fn roundtrip_push_body_with_modifiers() {
-    let input = "^batch_01@1694567890000{fw=2.1}[temp:=32#C;humidity:=65#%]";
+    let input = "@1694567890000^batch_01{fw=2.1}[temp:=32#C;humidity:=65#%]";
     let parsed = parse_push_body(input).unwrap();
     let mut buf = [0u8; 512];
     let n = build_push_body(&parsed, &mut buf).unwrap();

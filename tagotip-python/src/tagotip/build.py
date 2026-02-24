@@ -72,10 +72,10 @@ def build_uplink(frame: UplinkFrame) -> str:
         elif pb.structured is not None:
             sb = pb.structured
             body = ""
-            if sb.group is not None:
-                body += f"^{sb.group}"
             if sb.timestamp is not None:
                 body += f"@{sb.timestamp}"
+            if sb.group is not None:
+                body += f"^{sb.group}"
             if sb.meta:
                 body += _write_meta(sb.meta)
             body += "[" + ";".join(_write_variable(v) for v in sb.variables) + "]"

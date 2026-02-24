@@ -128,7 +128,7 @@ pub fn parse_pull_body<'a>(body: &'a str, base_pos: usize) -> Result<PullBody<'a
     Ok(PullBody { variables })
 }
 
-/// Parse body-level modifiers: `^GROUP @TIMESTAMP {METADATA}` (before `[`).
+/// Parse body-level modifiers: `@TIMESTAMP ^GROUP {METADATA}` (before `[`).
 fn parse_body_modifiers<'a>(
     s: &'a str,
     base_pos: usize,
@@ -144,12 +144,12 @@ fn parse_body_modifiers<'a>(
     let mut timestamp = None;
     let mut meta_range = None;
 
-    // phase: 0=^, 1=@, 2={, 3=done
+    // phase: 0=@, 1=^, 2={, 3=done
     let mut phase = 0;
 
     while pos < bytes.len() {
         match bytes[pos] {
-            b'^' => {
+            b'@' => {
                 if phase > 0 {
                     return Err(ParseError::new(
                         ParseErrorKind::InvalidModifier,
@@ -159,12 +159,12 @@ fn parse_body_modifiers<'a>(
                 pos += 1;
                 let start = pos;
                 pos = scan_until_mod(bytes, pos);
-                let g = &s[start..pos];
-                validate::validate_group(g, base_pos + start)?;
-                group = Some(g);
+                let ts = &s[start..pos];
+                validate_digits(ts, base_pos + start)?;
+                timestamp = Some(ts);
                 phase = 1;
             }
-            b'@' => {
+            b'^' => {
                 if phase > 1 {
                     return Err(ParseError::new(
                         ParseErrorKind::InvalidModifier,
@@ -174,9 +174,9 @@ fn parse_body_modifiers<'a>(
                 pos += 1;
                 let start = pos;
                 pos = scan_until_any(bytes, pos, b"{");
-                let ts = &s[start..pos];
-                validate_digits(ts, base_pos + start)?;
-                timestamp = Some(ts);
+                let g = &s[start..pos];
+                validate::validate_group(g, base_pos + start)?;
+                group = Some(g);
                 phase = 2;
             }
             b'{' => {
@@ -226,14 +226,14 @@ fn add_to_pool<'a>(
     })
 }
 
-/// Scan forward until `@` or `{` (body modifier boundaries).
+/// Scan forward until `^` or `{` (body modifier boundaries).
 fn scan_until_mod(bytes: &[u8], mut pos: usize) -> usize {
     while pos < bytes.len() {
         if bytes[pos] == b'\\' && pos + 1 < bytes.len() {
             pos += 2;
             continue;
         }
-        if bytes[pos] == b'@' || bytes[pos] == b'{' {
+        if bytes[pos] == b'^' || bytes[pos] == b'{' {
             return pos;
         }
         pos += 1;
