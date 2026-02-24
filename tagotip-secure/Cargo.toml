@@ -23,7 +23,7 @@ full = ["aes-128-ccm", "aes-128-gcm", "aes-256-ccm", "aes-256-gcm", "chacha20-po
 std = ["tagotip-codec/std", "sha2/std", "hmac/std"]
 
 [dependencies]
-tagotip-codec = { version = "0.1.0-beta.3", path = "../tagotip-codec" }
+tagotip-codec = { version = "0.1.0-beta.4", path = "../tagotip-codec" }
 sha2 = { version = "0.10", default-features = false }
 hmac = { version = "0.12", default-features = false }
 aes = { version = "0.8", default-features = false, optional = true }
