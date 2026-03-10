@@ -40,8 +40,8 @@ tagotip-ffi (Rust crate, C ABI)
 
 The protocol specification lives in the `protocol/` submodule:
 
-- [**TagoTiP.md**](protocol/TagoTiP.md) — Core protocol spec (Draft v1.0, Revision B)
-- [**TagoTiPs.md**](protocol/TagoTiPs.md) — Secure envelope spec (Draft v1.0, Revision C)
+- [**TagoTiP.md**](protocol/TagoTiP.md) — Core protocol spec (v1.0, Revision C)
+- [**TagoTiPs.md**](protocol/TagoTiPs.md) — Secure envelope spec (v1.0, Revision C)
 
 ### Frame Format
 

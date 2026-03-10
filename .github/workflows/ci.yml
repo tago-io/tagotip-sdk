@@ -29,8 +29,14 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets --exclude tagotip-python
 
+      - name: Clippy (tagotip-secure, all features)
+        run: cargo clippy -p tagotip-secure --all-features -- -D warnings
+
       - name: Test
         run: cargo test --workspace --exclude tagotip-python
+
+      - name: Test crypto (all cipher suites)
+        run: cargo test -p tagotip-secure --all-features
 
   node:
     name: Node.js
@@ -109,3 +115,17 @@ jobs:
       - name: Build and run test
         working-directory: tagotip-arduino
         run: cc -o test_parse tests/test_parse.c -I src && ./test_parse
+
+      - name: Build and run crypto test
+        working-directory: tagotip-arduino
+        run: cc -std=c99 -Wall -Wextra -Werror -o test_crypto tests/test_crypto.c src/tagotips.c -I src && ./test_crypto
+
+  audit:
+    name: Security audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
