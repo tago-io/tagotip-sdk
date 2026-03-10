@@ -28,7 +28,7 @@
     "test": "node --experimental-transform-types --test tests/*.test.ts"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^25.4.0",
     "tsdown": "^0.9.0",
     "typescript": "^5.7.0"
   }
