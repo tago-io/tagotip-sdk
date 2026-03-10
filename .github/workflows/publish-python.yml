@@ -23,7 +23,7 @@ jobs:
           args: --out dist
           working-directory: tagotip-python
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist-sdist
           path: tagotip-python/dist/*.tar.gz
@@ -61,7 +61,7 @@ jobs:
           working-directory: tagotip-python
           manylinux: auto
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dist-${{ matrix.target }}
           path: tagotip-python/dist/*.whl
