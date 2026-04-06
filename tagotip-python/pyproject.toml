@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "tagotip"
-version = "0.1.0-beta.4"
+version = "0.1.1"
 description = "TagoTiP protocol SDK for Python"
 license = "Apache-2.0"
 authors = [{ name = "TagoIO Inc." }]
