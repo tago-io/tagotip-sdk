@@ -51,6 +51,11 @@ function writeVariable(v: Variable): string {
   let s = v.name;
   s += writeValue(v.operator, v.value);
   if (v.unit !== undefined) s += `#${v.unit}`;
+  if (v.location !== undefined) {
+    let loc = `@=${v.location.lat},${v.location.lng}`;
+    if (v.location.alt !== undefined) loc += `,${v.location.alt}`;
+    s += loc;
+  }
   if (v.timestamp !== undefined) s += `@${v.timestamp}`;
   if (v.group !== undefined) s += `^${v.group}`;
   if (v.meta !== undefined && v.meta.length > 0) s += writeMetaPairs(v.meta);
@@ -69,6 +74,11 @@ function writePushBody(body: PushBody): string {
   let s = "";
 
   // Body-level modifiers
+  if (sb.location !== undefined) {
+    let loc = `@=${sb.location.lat},${sb.location.lng}`;
+    if (sb.location.alt !== undefined) loc += `,${sb.location.alt}`;
+    s += loc;
+  }
   if (sb.timestamp !== undefined) s += `@${sb.timestamp}`;
   if (sb.group !== undefined) s += `^${sb.group}`;
   if (sb.meta !== undefined && sb.meta.length > 0) s += writeMetaPairs(sb.meta);

@@ -42,6 +42,14 @@ pub enum Value<'a> {
   },
 }
 
+/// Location suffix coordinates (`@=lat,lng[,alt]`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LocationSuffix<'a> {
+  pub lat: &'a str,
+  pub lng: &'a str,
+  pub alt: Option<&'a str>,
+}
+
 /// A single metadata key-value pair.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MetaPair<'a> {
@@ -67,6 +75,7 @@ pub struct Variable<'a> {
   pub operator: Operator,
   pub value: Value<'a>,
   pub unit: Option<&'a str>,
+  pub location: Option<LocationSuffix<'a>>,
   pub timestamp: Option<&'a str>,
   pub group: Option<&'a str>,
   pub meta: Option<MetaRange>,
@@ -97,6 +106,7 @@ pub struct PassthroughBody<'a> {
 /// Metadata for both body-level and variable-level is stored in `meta_pool`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructuredBody<'a> {
+  pub location: Option<LocationSuffix<'a>>,
   pub group: Option<&'a str>,
   pub timestamp: Option<&'a str>,
   pub body_meta: Option<MetaRange>,

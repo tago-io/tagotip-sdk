@@ -2,15 +2,20 @@ use crate::consts::MAX_VARIABLES;
 use crate::error::{ParseError, ParseErrorKind};
 use crate::inline_vec::InlineVec;
 use crate::types::{
-  MAX_TOTAL_META, MetaPair, MetaRange, PassthroughBody, PassthroughEncoding, PullBody, PushBody, StructuredBody,
-  Variable,
+  LocationSuffix, MAX_TOTAL_META, MetaPair, MetaRange, PassthroughBody, PassthroughEncoding, PullBody, PushBody,
+  StructuredBody, Variable,
 };
 use crate::validate;
 
 use super::variable::{parse_metadata, parse_variable};
 
 /// Body-level modifiers parsed from the prefix before `[`.
-type BodyModifiers<'a> = (Option<&'a str>, Option<&'a str>, Option<MetaRange>);
+type BodyModifiers<'a> = (
+  Option<LocationSuffix<'a>>,
+  Option<&'a str>,
+  Option<&'a str>,
+  Option<MetaRange>,
+);
 
 /// Parse a PUSH body string (everything after SERIAL|).
 pub fn parse_push_body<'a>(body: &'a str, base_pos: usize) -> Result<PushBody<'a>, ParseError> {
@@ -47,7 +52,7 @@ pub fn parse_push_body<'a>(body: &'a str, base_pos: usize) -> Result<PushBody<'a
   let mut meta_pool: InlineVec<MetaPair<'a>, MAX_TOTAL_META> = InlineVec::new();
 
   // Parse body-level modifiers
-  let (body_group, body_timestamp, body_meta) = parse_body_modifiers(mod_str, base_pos, &mut meta_pool)?;
+  let (body_location, body_group, body_timestamp, body_meta) = parse_body_modifiers(mod_str, base_pos, &mut meta_pool)?;
 
   // Parse variables
   let variables = parse_variable_list(var_block, base_pos + bracket_pos + 1, &mut meta_pool)?;
@@ -60,6 +65,7 @@ pub fn parse_push_body<'a>(body: &'a str, base_pos: usize) -> Result<PushBody<'a
   }
 
   Ok(PushBody::Structured(StructuredBody {
+    location: body_location,
     group: body_group,
     timestamp: body_timestamp,
     body_meta,
@@ -120,41 +126,57 @@ pub fn parse_pull_body<'a>(body: &'a str, base_pos: usize) -> Result<PullBody<'a
   Ok(PullBody { variables })
 }
 
-/// Parse body-level modifiers: `@TIMESTAMP ^GROUP {METADATA}` (before `[`).
+/// Parse body-level modifiers: `@=LOCATION @TIMESTAMP ^GROUP {METADATA}` (before `[`).
 fn parse_body_modifiers<'a>(
   s: &'a str,
   base_pos: usize,
   meta_pool: &mut InlineVec<MetaPair<'a>, MAX_TOTAL_META>,
 ) -> Result<BodyModifiers<'a>, ParseError> {
   if s.is_empty() {
-    return Ok((None, None, None));
+    return Ok((None, None, None, None));
   }
 
   let bytes = s.as_bytes();
   let mut pos = 0;
+  let mut location = None;
   let mut group = None;
   let mut timestamp = None;
   let mut meta_range = None;
 
-  // phase: 0=@, 1=^, 2={, 3=done
+  // phase: 0=@=, 1=@, 2=^, 3={, 4=done
   let mut phase = 0;
 
   while pos < bytes.len() {
     match bytes[pos] {
       b'@' => {
-        if phase > 0 {
-          return Err(ParseError::new(ParseErrorKind::InvalidModifier, base_pos + pos));
+        // Disambiguate: @= means location, @digit means timestamp
+        if pos + 1 < bytes.len() && bytes[pos + 1] == b'=' {
+          // @= location
+          if phase > 0 {
+            return Err(ParseError::new(ParseErrorKind::InvalidModifier, base_pos + pos));
+          }
+          pos += 2; // consume @=
+          let start = pos;
+          pos = scan_until_mod(bytes, pos);
+          let loc_str = &s[start..pos];
+          location = Some(parse_body_location(loc_str, base_pos + start)?);
+          phase = 1;
+        } else {
+          // @timestamp
+          if phase > 1 {
+            return Err(ParseError::new(ParseErrorKind::InvalidModifier, base_pos + pos));
+          }
+          pos += 1;
+          let start = pos;
+          pos = scan_until_mod(bytes, pos);
+          let ts = &s[start..pos];
+          validate_digits(ts, base_pos + start)?;
+          timestamp = Some(ts);
+          phase = 2;
         }
-        pos += 1;
-        let start = pos;
-        pos = scan_until_mod(bytes, pos);
-        let ts = &s[start..pos];
-        validate_digits(ts, base_pos + start)?;
-        timestamp = Some(ts);
-        phase = 1;
       }
       b'^' => {
-        if phase > 1 {
+        if phase > 2 {
           return Err(ParseError::new(ParseErrorKind::InvalidModifier, base_pos + pos));
         }
         pos += 1;
@@ -163,10 +185,10 @@ fn parse_body_modifiers<'a>(
         let g = &s[start..pos];
         validate::validate_group(g, base_pos + start)?;
         group = Some(g);
-        phase = 2;
+        phase = 3;
       }
       b'{' => {
-        if phase > 2 {
+        if phase > 3 {
           return Err(ParseError::new(ParseErrorKind::InvalidModifier, base_pos + pos));
         }
         pos += 1;
@@ -177,7 +199,7 @@ fn parse_body_modifiers<'a>(
         let parsed = parse_metadata(meta_str, base_pos + start)?;
         meta_range = Some(add_to_pool(meta_pool, &parsed, base_pos + start)?);
         pos = start + end + 1;
-        phase = 3;
+        phase = 4;
       }
       _ => {
         return Err(ParseError::new(ParseErrorKind::InvalidModifier, base_pos + pos));
@@ -185,7 +207,40 @@ fn parse_body_modifiers<'a>(
     }
   }
 
-  Ok((group, timestamp, meta_range))
+  Ok((location, group, timestamp, meta_range))
+}
+
+/// Parse a body-level location modifier: `lat,lng` or `lat,lng,alt`.
+fn parse_body_location(s: &str, pos: usize) -> Result<LocationSuffix<'_>, ParseError> {
+  let mut parts = s.splitn(4, ',');
+  let lat = parts
+    .next()
+    .ok_or_else(|| ParseError::new(ParseErrorKind::InvalidModifier, pos))?;
+  let lng = parts
+    .next()
+    .ok_or_else(|| ParseError::new(ParseErrorKind::InvalidModifier, pos))?;
+  let alt = parts.next();
+
+  if parts.next().is_some() {
+    return Err(ParseError::new(ParseErrorKind::InvalidModifier, pos));
+  }
+
+  if lat.is_empty() || lng.is_empty() {
+    return Err(ParseError::new(ParseErrorKind::InvalidModifier, pos));
+  }
+
+  validate::validate_number(lat, pos).map_err(|_| ParseError::new(ParseErrorKind::InvalidModifier, pos))?;
+  validate::validate_number(lng, pos).map_err(|_| ParseError::new(ParseErrorKind::InvalidModifier, pos))?;
+
+  if let Some(a) = alt {
+    if a.is_empty() {
+      return Err(ParseError::new(ParseErrorKind::InvalidModifier, pos));
+    }
+    validate::validate_number(a, pos).map_err(|_| ParseError::new(ParseErrorKind::InvalidModifier, pos))?;
+    Ok(LocationSuffix { lat, lng, alt: Some(a) })
+  } else {
+    Ok(LocationSuffix { lat, lng, alt: None })
+  }
 }
 
 /// Add metadata pairs to the shared pool and return the range.
@@ -206,14 +261,14 @@ fn add_to_pool<'a>(
   })
 }
 
-/// Scan forward until `^` or `{` (body modifier boundaries).
+/// Scan forward until `@`, `^`, or `{` (body modifier boundaries).
 fn scan_until_mod(bytes: &[u8], mut pos: usize) -> usize {
   while pos < bytes.len() {
     if bytes[pos] == b'\\' && pos + 1 < bytes.len() {
       pos += 2;
       continue;
     }
-    if bytes[pos] == b'^' || bytes[pos] == b'{' {
+    if bytes[pos] == b'@' || bytes[pos] == b'^' || bytes[pos] == b'{' {
       return pos;
     }
     pos += 1;

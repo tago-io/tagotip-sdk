@@ -1,5 +1,5 @@
 use crate::error::{ParseError, ParseErrorKind};
-use crate::types::{MetaPair, MetadataBlock, Operator, Value, Variable};
+use crate::types::{LocationSuffix, MetaPair, MetadataBlock, Operator, Value, Variable};
 use crate::validate;
 
 /// Result of parsing a single variable — includes metadata pairs to be added to the pool.
@@ -33,13 +33,14 @@ pub fn parse_variable(s: &str, base_pos: usize) -> Result<ParsedVariable<'_>, Pa
 
   let value = parse_value(value_str, operator, base_pos + value_start)?;
 
-  // Parse optional suffixes in order: #unit @timestamp ^group {metadata}
+  // Parse optional suffixes in order: #unit @=location @timestamp ^group {metadata}
   let mut unit = None;
+  let mut location = None;
   let mut timestamp = None;
   let mut group = None;
   let mut meta_pairs = None;
 
-  // #unit — MUST NOT appear with @= (location)
+  // #unit — MUST NOT appear with @= operator (location)
   if pos < len && bytes[pos] == b'#' {
     if operator == Operator::Location {
       return Err(ParseError::new(ParseErrorKind::InvalidVariable, base_pos + pos));
@@ -50,6 +51,19 @@ pub fn parse_variable(s: &str, base_pos: usize) -> Result<ParsedVariable<'_>, Pa
     let u = &s[start..pos];
     validate::validate_unit(u, base_pos + start)?;
     unit = Some(u);
+  }
+
+  // @= location suffix — disambiguate by peeking next char
+  if pos < len && bytes[pos] == b'@' && pos + 1 < len && bytes[pos + 1] == b'=' {
+    // @= location suffix — MUST NOT appear with @= operator
+    if operator == Operator::Location {
+      return Err(ParseError::new(ParseErrorKind::InvalidVariable, base_pos + pos));
+    }
+    pos += 2; // consume @=
+    let start = pos;
+    pos = scan_until_any(bytes, pos, b"@^{");
+    let loc_str = &s[start..pos];
+    location = Some(parse_location_suffix(loc_str, base_pos + start)?);
   }
 
   // @timestamp
@@ -91,6 +105,7 @@ pub fn parse_variable(s: &str, base_pos: usize) -> Result<ParsedVariable<'_>, Pa
       operator,
       value,
       unit,
+      location,
       timestamp,
       group,
       meta: None, // caller sets this after adding to pool
@@ -192,6 +207,39 @@ fn parse_value(s: &str, op: Operator, pos: usize) -> Result<Value<'_>, ParseErro
       _ => Err(ParseError::new(ParseErrorKind::InvalidVariable, pos)),
     },
     Operator::Location => parse_location(s, pos),
+  }
+}
+
+/// Parse a location suffix: `lat,lng` or `lat,lng,alt`.
+fn parse_location_suffix(s: &str, pos: usize) -> Result<LocationSuffix<'_>, ParseError> {
+  let mut parts = s.splitn(4, ',');
+  let lat = parts
+    .next()
+    .ok_or_else(|| ParseError::new(ParseErrorKind::InvalidVariable, pos))?;
+  let lng = parts
+    .next()
+    .ok_or_else(|| ParseError::new(ParseErrorKind::InvalidVariable, pos))?;
+  let alt = parts.next();
+
+  if parts.next().is_some() {
+    return Err(ParseError::new(ParseErrorKind::InvalidVariable, pos));
+  }
+
+  if lat.is_empty() || lng.is_empty() {
+    return Err(ParseError::new(ParseErrorKind::InvalidVariable, pos));
+  }
+
+  validate::validate_number(lat, pos)?;
+  validate::validate_number(lng, pos)?;
+
+  if let Some(a) = alt {
+    if a.is_empty() {
+      return Err(ParseError::new(ParseErrorKind::InvalidVariable, pos));
+    }
+    validate::validate_number(a, pos)?;
+    Ok(LocationSuffix { lat, lng, alt: Some(a) })
+  } else {
+    Ok(LocationSuffix { lat, lng, alt: None })
   }
 }
 

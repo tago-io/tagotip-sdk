@@ -77,6 +77,16 @@ fn structured_body_to_dict<'py>(py: Python<'py>, sb: &StructuredBody<'_>) -> PyR
   let body_dict = PyDict::new(py);
   body_dict.set_item("type", "structured")?;
 
+  if let Some(loc) = &sb.location {
+    let loc_dict = PyDict::new(py);
+    loc_dict.set_item("lat", loc.lat)?;
+    loc_dict.set_item("lng", loc.lng)?;
+    if let Some(a) = loc.alt {
+      loc_dict.set_item("alt", a)?;
+    }
+    body_dict.set_item("location", loc_dict)?;
+  }
+
   if let Some(g) = sb.group {
     body_dict.set_item("group", g)?;
   }
@@ -131,6 +141,15 @@ fn structured_body_to_dict<'py>(py: Python<'py>, sb: &StructuredBody<'_>) -> PyR
 
     if let Some(u) = var.unit {
       var_dict.set_item("unit", u)?;
+    }
+    if let Some(loc) = &var.location {
+      let loc_dict = PyDict::new(py);
+      loc_dict.set_item("lat", loc.lat)?;
+      loc_dict.set_item("lng", loc.lng)?;
+      if let Some(a) = loc.alt {
+        loc_dict.set_item("alt", a)?;
+      }
+      var_dict.set_item("location", loc_dict)?;
     }
     if let Some(ts) = var.timestamp {
       var_dict.set_item("timestamp", ts)?;

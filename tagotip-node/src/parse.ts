@@ -24,6 +24,7 @@ import type {
   StructuredBody,
   Variable,
   Value,
+  LocationValue,
   MetaPair,
   AckDetail,
 } from "./types.ts";
@@ -322,6 +323,31 @@ function parseLocation(s: string, pos: number): Value {
   return { type: "location", value: { lat, lng } };
 }
 
+function parseLocationSuffix(s: string, pos: number): LocationValue {
+  let commaCount = 0;
+  for (let i = 0; i < s.length; i++) {
+    if (s[i] === ",") commaCount++;
+  }
+  if (commaCount > 2) fail("invalid_variable", pos);
+
+  const parts = s.split(",");
+  const lat = parts[0];
+  const lng = parts[1];
+  if (lat === undefined || lng === undefined) fail("invalid_variable", pos);
+  if (lat.length === 0 || lng.length === 0) fail("invalid_variable", pos);
+
+  validateNumber(lat, pos);
+  validateNumber(lng, pos);
+
+  const altStr = parts[2];
+  if (altStr !== undefined) {
+    if (altStr.length === 0) fail("invalid_variable", pos);
+    validateNumber(altStr, pos);
+    return { lat, lng, alt: altStr };
+  }
+  return { lat, lng };
+}
+
 function parseVariable(s: string, basePos: number): Variable {
   const [opPos, opLen, operator] = findOperator(s, basePos);
   const name = s.slice(0, opPos);
@@ -338,6 +364,7 @@ function parseVariable(s: string, basePos: number): Variable {
   const value = parseValue(valueStr, operator, basePos + valueStart);
 
   let unit: string | undefined;
+  let location: LocationValue | undefined;
   let timestamp: string | undefined;
   let group: string | undefined;
   let meta: MetaPair[] | undefined;
@@ -353,6 +380,21 @@ function parseVariable(s: string, basePos: number): Variable {
     const u = s.slice(start, pos);
     validateUnit(u, basePos + start);
     unit = u;
+  }
+
+  // @= location suffix or @ timestamp — disambiguate by peeking next char
+  if (pos < s.length && s[pos] === "@") {
+    if (pos + 1 < s.length && s[pos + 1] === "=") {
+      // @= location suffix — MUST NOT appear with @= operator
+      if (operator === Operator.Location) {
+        fail("invalid_variable", basePos + pos);
+      }
+      pos += 2; // consume @=
+      const start = pos;
+      pos = scanUntilAny(s, pos, "@^{");
+      const locStr = s.slice(start, pos);
+      location = parseLocationSuffix(locStr, basePos + start);
+    }
   }
 
   // @timestamp
@@ -386,7 +428,13 @@ function parseVariable(s: string, basePos: number): Variable {
     pos = end + 1;
   }
 
-  return { name, operator, value, unit, timestamp, group, meta };
+  const result: Variable = { name, operator, value };
+  if (unit !== undefined) result.unit = unit;
+  if (location !== undefined) result.location = location;
+  if (timestamp !== undefined) result.timestamp = timestamp;
+  if (group !== undefined) result.group = group;
+  if (meta !== undefined) result.meta = meta;
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -429,6 +477,7 @@ function parseVariableList(s: string, basePos: number): Variable[] {
 // ---------------------------------------------------------------------------
 
 interface BodyModifiers {
+  location?: LocationValue;
   group?: string;
   timestamp?: string;
   meta?: MetaPair[];
@@ -438,33 +487,46 @@ function parseBodyModifiers(s: string, basePos: number): BodyModifiers {
   if (s.length === 0) return {};
 
   let pos = 0;
+  let location: LocationValue | undefined;
   let group: string | undefined;
   let timestamp: string | undefined;
   let meta: MetaPair[] | undefined;
-  let phase = 0; // 0=@, 1=^, 2={, 3=done
+  let phase = 0; // 0=@=, 1=@, 2=^, 3={, 4=done
 
   while (pos < s.length) {
     const ch = s[pos];
     if (ch === "@") {
-      if (phase > 0) fail("invalid_modifier", basePos + pos);
-      pos += 1;
-      const start = pos;
-      pos = scanUntilAny(s, pos, "^{");
-      const ts = s.slice(start, pos);
-      validateDigits(ts, basePos + start);
-      timestamp = ts;
-      phase = 1;
+      if (pos + 1 < s.length && s[pos + 1] === "=") {
+        // @= location modifier
+        if (phase > 0) fail("invalid_modifier", basePos + pos);
+        pos += 2; // consume @=
+        const start = pos;
+        pos = scanUntilAny(s, pos, "@^{");
+        const locStr = s.slice(start, pos);
+        location = parseLocationSuffix(locStr, basePos + start);
+        phase = 1;
+      } else {
+        // @ timestamp
+        if (phase > 1) fail("invalid_modifier", basePos + pos);
+        pos += 1;
+        const start = pos;
+        pos = scanUntilAny(s, pos, "^{");
+        const ts = s.slice(start, pos);
+        validateDigits(ts, basePos + start);
+        timestamp = ts;
+        phase = 2;
+      }
     } else if (ch === "^") {
-      if (phase > 1) fail("invalid_modifier", basePos + pos);
+      if (phase > 2) fail("invalid_modifier", basePos + pos);
       pos += 1;
       const start = pos;
       pos = scanUntilAny(s, pos, "{");
       const g = s.slice(start, pos);
       validateGroup(g, basePos + start);
       group = g;
-      phase = 2;
+      phase = 3;
     } else if (ch === "{") {
-      if (phase > 2) fail("invalid_modifier", basePos + pos);
+      if (phase > 3) fail("invalid_modifier", basePos + pos);
       pos += 1;
       const start = pos;
       const end = findUnescapedChar(s, "}", pos);
@@ -472,13 +534,13 @@ function parseBodyModifiers(s: string, basePos: number): BodyModifiers {
       const metaStr = s.slice(start, end);
       meta = parseMetadata(metaStr, basePos + start);
       pos = end + 1;
-      phase = 3;
+      phase = 4;
     } else {
       fail("invalid_modifier", basePos + pos);
     }
   }
 
-  return { group, timestamp, meta };
+  return { location, group, timestamp, meta };
 }
 
 // ---------------------------------------------------------------------------
@@ -508,6 +570,7 @@ function parsePushBody(body: string, basePos: number): PushBody {
   if (variables.length === 0) fail("invalid_variable_block", basePos + bracketPos);
 
   const structured: StructuredBody = { variables };
+  if (mods.location !== undefined) structured.location = mods.location;
   if (mods.group !== undefined) structured.group = mods.group;
   if (mods.timestamp !== undefined) structured.timestamp = mods.timestamp;
   if (mods.meta !== undefined && mods.meta.length > 0) structured.meta = mods.meta;

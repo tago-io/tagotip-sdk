@@ -386,6 +386,92 @@ func parseLocation(s string, pos int) (Value, error) {
 	return Value{Type: OperatorLocation, Location: loc}, nil
 }
 
+func parseLocationSuffix(s string, pos int) (*LocationValue, error) {
+	commaCount := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == ',' {
+			commaCount++
+		}
+	}
+	if commaCount > 2 {
+		return nil, fail(ErrInvalidVariable, pos)
+	}
+
+	parts := strings.SplitN(s, ",", 4)
+	if len(parts) < 2 {
+		return nil, fail(ErrInvalidVariable, pos)
+	}
+	lat := parts[0]
+	lng := parts[1]
+	if len(lat) == 0 || len(lng) == 0 {
+		return nil, fail(ErrInvalidVariable, pos)
+	}
+
+	if err := validateNumber(lat, pos); err != nil {
+		return nil, err
+	}
+	if err := validateNumber(lng, pos); err != nil {
+		return nil, err
+	}
+
+	loc := &LocationValue{Lat: lat, Lng: lng}
+	if len(parts) > 2 {
+		alt := parts[2]
+		if len(alt) == 0 {
+			return nil, fail(ErrInvalidVariable, pos)
+		}
+		if err := validateNumber(alt, pos); err != nil {
+			return nil, err
+		}
+		loc.Alt = &alt
+	}
+
+	return loc, nil
+}
+
+func parseBodyLocationSuffix(s string, pos int) (*LocationValue, error) {
+	commaCount := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == ',' {
+			commaCount++
+		}
+	}
+	if commaCount > 2 {
+		return nil, fail(ErrInvalidModifier, pos)
+	}
+
+	parts := strings.SplitN(s, ",", 4)
+	if len(parts) < 2 {
+		return nil, fail(ErrInvalidModifier, pos)
+	}
+	lat := parts[0]
+	lng := parts[1]
+	if len(lat) == 0 || len(lng) == 0 {
+		return nil, fail(ErrInvalidModifier, pos)
+	}
+
+	if err := validateNumber(lat, pos); err != nil {
+		return nil, err
+	}
+	if err := validateNumber(lng, pos); err != nil {
+		return nil, err
+	}
+
+	loc := &LocationValue{Lat: lat, Lng: lng}
+	if len(parts) > 2 {
+		alt := parts[2]
+		if len(alt) == 0 {
+			return nil, fail(ErrInvalidModifier, pos)
+		}
+		if err := validateNumber(alt, pos); err != nil {
+			return nil, err
+		}
+		loc.Alt = &alt
+	}
+
+	return loc, nil
+}
+
 func parseVariable(s string, basePos int) (Variable, error) {
 	opPos, opLen, operator, err := findOperator(s, basePos)
 	if err != nil {
@@ -412,6 +498,7 @@ func parseVariable(s string, basePos int) (Variable, error) {
 	}
 
 	var unit *string
+	var location *LocationValue
 	var timestamp *string
 	var group *string
 	var meta []MetaPair
@@ -429,6 +516,25 @@ func parseVariable(s string, basePos int) (Variable, error) {
 			return Variable{}, err
 		}
 		unit = &u
+	}
+
+	// @= location suffix or @ timestamp — disambiguate by peeking next char
+	if pos < len(s) && s[pos] == '@' {
+		if pos+1 < len(s) && s[pos+1] == '=' {
+			// @= location suffix — MUST NOT appear with @= operator
+			if operator == OperatorLocation {
+				return Variable{}, fail(ErrInvalidVariable, basePos+pos)
+			}
+			pos += 2 // consume @=
+			start := pos
+			pos = scanUntilAny(s, pos, "@^{")
+			locStr := s[start:pos]
+			loc, err := parseLocationSuffix(locStr, basePos+start)
+			if err != nil {
+				return Variable{}, err
+			}
+			location = loc
+		}
 	}
 
 	// @timestamp
@@ -479,6 +585,7 @@ func parseVariable(s string, basePos int) (Variable, error) {
 		Operator:  operator,
 		Value:     value,
 		Unit:      unit,
+		Location:  location,
 		Timestamp: timestamp,
 		Group:     group,
 		Meta:      meta,
@@ -533,6 +640,7 @@ func parseVariableList(s string, basePos int) ([]Variable, error) {
 // ---------------------------------------------------------------------------
 
 type bodyModifiers struct {
+	location  *LocationValue
 	group     *string
 	timestamp *string
 	meta      []MetaPair
@@ -544,29 +652,48 @@ func parseBodyModifiers(s string, basePos int) (bodyModifiers, error) {
 	}
 
 	pos := 0
+	var location *LocationValue
 	var group *string
 	var timestamp *string
 	var meta []MetaPair
-	phase := 0 // 0=@, 1=^, 2={, 3=done
+	phase := 0 // 0=@=, 1=@, 2=^, 3={, 4=done
 
 	for pos < len(s) {
 		ch := s[pos]
 		switch ch {
 		case '@':
-			if phase > 0 {
-				return bodyModifiers{}, fail(ErrInvalidModifier, basePos+pos)
+			if pos+1 < len(s) && s[pos+1] == '=' {
+				// @= location
+				if phase > 0 {
+					return bodyModifiers{}, fail(ErrInvalidModifier, basePos+pos)
+				}
+				pos += 2 // consume @=
+				start := pos
+				pos = scanUntilAny(s, pos, "@^{")
+				locStr := s[start:pos]
+				loc, err := parseBodyLocationSuffix(locStr, basePos+start)
+				if err != nil {
+					return bodyModifiers{}, err
+				}
+				location = loc
+				phase = 1
+			} else {
+				// @ timestamp
+				if phase > 1 {
+					return bodyModifiers{}, fail(ErrInvalidModifier, basePos+pos)
+				}
+				pos++
+				start := pos
+				pos = scanUntilAny(s, pos, "^{")
+				ts := s[start:pos]
+				if err := validateDigits(ts, basePos+start); err != nil {
+					return bodyModifiers{}, err
+				}
+				timestamp = &ts
+				phase = 2
 			}
-			pos++
-			start := pos
-			pos = scanUntilAny(s, pos, "^{")
-			ts := s[start:pos]
-			if err := validateDigits(ts, basePos+start); err != nil {
-				return bodyModifiers{}, err
-			}
-			timestamp = &ts
-			phase = 1
 		case '^':
-			if phase > 1 {
+			if phase > 2 {
 				return bodyModifiers{}, fail(ErrInvalidModifier, basePos+pos)
 			}
 			pos++
@@ -577,9 +704,9 @@ func parseBodyModifiers(s string, basePos int) (bodyModifiers, error) {
 				return bodyModifiers{}, err
 			}
 			group = &g
-			phase = 2
+			phase = 3
 		case '{':
-			if phase > 2 {
+			if phase > 3 {
 				return bodyModifiers{}, fail(ErrInvalidModifier, basePos+pos)
 			}
 			pos++
@@ -595,13 +722,13 @@ func parseBodyModifiers(s string, basePos int) (bodyModifiers, error) {
 			}
 			meta = m
 			pos = end + 1
-			phase = 3
+			phase = 4
 		default:
 			return bodyModifiers{}, fail(ErrInvalidModifier, basePos+pos)
 		}
 	}
 
-	return bodyModifiers{group: group, timestamp: timestamp, meta: meta}, nil
+	return bodyModifiers{location: location, group: group, timestamp: timestamp, meta: meta}, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -646,6 +773,7 @@ func parsePushBody(body string, basePos int) (*PushBody, error) {
 
 	sb := &StructuredBody{
 		Variables: variables,
+		Location:  mods.location,
 		Group:     mods.group,
 		Timestamp: mods.timestamp,
 		Meta:      mods.meta,

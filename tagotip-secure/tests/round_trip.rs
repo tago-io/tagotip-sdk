@@ -24,6 +24,7 @@ fn make_push_frame() -> HeadlessFrame<'static> {
     operator: Operator::Number,
     value: Value::Number("32.5"),
     unit: Some("C"),
+    location: None,
     timestamp: None,
     group: None,
     meta: None,
@@ -33,6 +34,7 @@ fn make_push_frame() -> HeadlessFrame<'static> {
     operator: Operator::Number,
     value: Value::Number("65"),
     unit: Some("%"),
+    location: None,
     timestamp: None,
     group: None,
     meta: None,
@@ -41,6 +43,7 @@ fn make_push_frame() -> HeadlessFrame<'static> {
   HeadlessFrame {
     serial: SERIAL,
     push_body: Some(PushBody::Structured(StructuredBody {
+      location: None,
       group: None,
       timestamp: None,
       body_meta: None,

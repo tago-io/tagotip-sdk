@@ -169,6 +169,9 @@ pub struct TagotipVariable {
   pub operator: TagotipOperator,
   pub value: TagotipValue,
   pub unit: TagotipStr,
+  pub loc_lat: TagotipStr,
+  pub loc_lng: TagotipStr,
+  pub loc_alt: TagotipStr,
   pub timestamp: TagotipStr,
   pub group: TagotipStr,
   pub meta_start: u16,
@@ -197,6 +200,9 @@ pub struct TagotipUplinkFrame {
   pub push_body_tag: TagotipPushBodyTag,
 
   // Structured push body fields
+  pub body_loc_lat: TagotipStr,
+  pub body_loc_lng: TagotipStr,
+  pub body_loc_alt: TagotipStr,
   pub body_group: TagotipStr,
   pub body_timestamp: TagotipStr,
   pub body_meta_start: u16,
@@ -345,6 +351,7 @@ fn convert_ack_status(s: &AckStatus) -> TagotipAckStatus {
 /// # Safety
 /// - `input_ptr` must point to a valid UTF-8 byte array of `input_len` bytes.
 /// - `out` must point to a valid, writeable `TagotipUplinkFrame`.
+#[allow(clippy::too_many_lines)]
 ///
 /// Returns 0 on success, negative error code on failure.
 #[unsafe(no_mangle)]
@@ -378,6 +385,18 @@ pub unsafe extern "C" fn tagotip_parse_uplink(
   match &frame.push_body {
     Some(PushBody::Structured(sb)) => {
       out.push_body_tag = TagotipPushBodyTag::Structured;
+      match &sb.location {
+        Some(loc) => {
+          out.body_loc_lat = TagotipStr::from_str(loc.lat);
+          out.body_loc_lng = TagotipStr::from_str(loc.lng);
+          out.body_loc_alt = TagotipStr::from_option(loc.alt);
+        }
+        None => {
+          out.body_loc_lat = TagotipStr::empty();
+          out.body_loc_lng = TagotipStr::empty();
+          out.body_loc_alt = TagotipStr::empty();
+        }
+      }
       out.body_group = TagotipStr::from_option(sb.group);
       out.body_timestamp = TagotipStr::from_option(sb.timestamp);
       if let Some(r) = sb.body_meta {
@@ -391,11 +410,22 @@ pub unsafe extern "C" fn tagotip_parse_uplink(
       let var_count = sb.variables.len().min(MAX_VARIABLES);
       out.variables_len = var_count as u16;
       for (i, var) in sb.variables.iter().enumerate().take(var_count) {
+        let (loc_lat, loc_lng, loc_alt) = match &var.location {
+          Some(loc) => (
+            TagotipStr::from_str(loc.lat),
+            TagotipStr::from_str(loc.lng),
+            TagotipStr::from_option(loc.alt),
+          ),
+          None => (TagotipStr::empty(), TagotipStr::empty(), TagotipStr::empty()),
+        };
         out.variables[i] = TagotipVariable {
           name: TagotipStr::from_str(var.name),
           operator: convert_operator(&var.operator),
           value: convert_value(&var.value),
           unit: TagotipStr::from_option(var.unit),
+          loc_lat,
+          loc_lng,
+          loc_alt,
           timestamp: TagotipStr::from_option(var.timestamp),
           group: TagotipStr::from_option(var.group),
           meta_start: var.meta.map_or(0, |r| r.start),

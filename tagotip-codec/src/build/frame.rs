@@ -112,15 +112,33 @@ impl<'buf> FrameWriter<'buf> {
     Ok(())
   }
 
+  /// Write a location suffix (`@=lat,lng[,alt]`).
+  fn write_location_suffix(&mut self, loc: &crate::types::LocationSuffix<'_>) -> Result<(), BuildError> {
+    self.write_str("@=")?;
+    self.write_str(loc.lat)?;
+    self.write_byte(b',')?;
+    self.write_str(loc.lng)?;
+    if let Some(a) = loc.alt {
+      self.write_byte(b',')?;
+      self.write_str(a)?;
+    }
+    Ok(())
+  }
+
   /// Write a single variable, looking up metadata from the pool.
   fn write_variable(&mut self, var: &Variable<'_>, meta_pool: &[MetaPair<'_>]) -> Result<(), BuildError> {
     self.write_str(var.name)?;
     self.write_value(var.operator, &var.value)?;
 
-    // #unit (not for location)
+    // #unit (not for location operator)
     if let Some(unit) = var.unit {
       self.write_byte(b'#')?;
       self.write_str(unit)?;
+    }
+
+    // @=location suffix
+    if let Some(ref loc) = var.location {
+      self.write_location_suffix(loc)?;
     }
 
     // @timestamp
@@ -148,11 +166,15 @@ impl<'buf> FrameWriter<'buf> {
   /// Write body-level modifiers.
   fn write_body_modifiers(
     &mut self,
+    location: Option<&crate::types::LocationSuffix<'_>>,
     group: Option<&str>,
     timestamp: Option<&str>,
     body_meta: Option<MetaRange>,
     meta_pool: &[MetaPair<'_>],
   ) -> Result<(), BuildError> {
+    if let Some(loc) = location {
+      self.write_location_suffix(loc)?;
+    }
     if let Some(ts) = timestamp {
       self.write_byte(b'@')?;
       self.write_str(ts)?;
@@ -322,7 +344,13 @@ fn write_push_body(w: &mut FrameWriter<'_>, body: &PushBody<'_>) -> Result<(), B
     }
     PushBody::Structured(structured) => {
       let pool = structured.meta_pool.as_slice();
-      w.write_body_modifiers(structured.group, structured.timestamp, structured.body_meta, pool)?;
+      w.write_body_modifiers(
+        structured.location.as_ref(),
+        structured.group,
+        structured.timestamp,
+        structured.body_meta,
+        pool,
+      )?;
       w.write_byte(b'[')?;
       for (i, var) in structured.variables.iter().enumerate() {
         if i > 0 {

@@ -42,6 +42,11 @@ def _write_variable(v: Variable) -> str:
     s = v.name + _write_value(v)
     if v.unit is not None:
         s += f"#{v.unit}"
+    if v.location is not None:
+        loc = v.location
+        s += f"@={loc.lat},{loc.lng}"
+        if loc.alt is not None:
+            s += f",{loc.alt}"
     if v.timestamp is not None:
         s += f"@{v.timestamp}"
     if v.group is not None:
@@ -72,6 +77,11 @@ def build_uplink(frame: UplinkFrame) -> str:
         elif pb.structured is not None:
             sb = pb.structured
             body = ""
+            if sb.location is not None:
+                loc = sb.location
+                body += f"@={loc.lat},{loc.lng}"
+                if loc.alt is not None:
+                    body += f",{loc.alt}"
             if sb.timestamp is not None:
                 body += f"@{sb.timestamp}"
             if sb.group is not None:

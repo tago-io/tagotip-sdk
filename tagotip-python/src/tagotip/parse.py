@@ -59,11 +59,17 @@ _OPERATOR_MAP = {
 
 
 def _convert_variable(raw: dict) -> Variable:
+    location = None
+    if "location" in raw:
+        loc_raw = raw["location"]
+        location = LocationValue(lat=loc_raw["lat"], lng=loc_raw["lng"], alt=loc_raw.get("alt"))
+
     return Variable(
         name=raw["name"],
         operator=_OPERATOR_MAP[raw["operator"]],
         value=_convert_value(raw["value"]),
         unit=raw.get("unit"),
+        location=location,
         timestamp=raw.get("timestamp"),
         group=raw.get("group"),
         meta=_convert_meta(raw.get("meta")),
@@ -80,9 +86,16 @@ def parse_uplink(input: str) -> UplinkFrame:
     if "push_body" in raw:
         pb = raw["push_body"]
         if pb["type"] == "structured":
+            body_location = None
+            if "location" in pb:
+                loc_raw = pb["location"]
+                body_location = LocationValue(
+                    lat=loc_raw["lat"], lng=loc_raw["lng"], alt=loc_raw.get("alt")
+                )
             push_body = PushBody(
                 structured=StructuredBody(
                     variables=[_convert_variable(v) for v in pb["variables"]],
+                    location=body_location,
                     group=pb.get("group"),
                     timestamp=pb.get("timestamp"),
                     meta=_convert_meta(pb.get("meta")),

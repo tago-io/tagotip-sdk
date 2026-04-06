@@ -73,6 +73,7 @@ export interface Variable {
   operator: Operator;
   value: Value;
   unit?: string;
+  location?: LocationValue;
   timestamp?: string;
   group?: string;
   meta?: MetaPair[];
@@ -80,6 +81,7 @@ export interface Variable {
 
 /** Structured PUSH body. */
 export interface StructuredBody {
+  location?: LocationValue;
   group?: string;
   timestamp?: string;
   meta?: MetaPair[];
