@@ -60,6 +60,7 @@ These types exist across all language bindings:
 - **AckFrame**: `seq?`, `status`, `detail?`
 - **AckStatus**: `Ok`, `Pong`, `Cmd`, `Err`
 - **AckDetail**: `Count(u32)`, `Variables(str)`, `Command(str)`, `Error{code,text}`, `Raw(str)`
+- **StructuredBody**: `location?`, `group?`, `timestamp?`, `meta?`, `variables`
 
 ## Constants
 
