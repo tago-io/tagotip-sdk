@@ -330,9 +330,8 @@ fn revision_d_body_level_location() {
 /// Variable-level location override
 #[test]
 fn revision_d_variable_location_override() {
-  let input = format!(
-    "PUSH|{AUTH}|sensor_01|@=39.74,-104.99@1694567890000[temp:=32@=39.75,-105.00@1694567891000;humidity:=65]"
-  );
+  let input =
+    format!("PUSH|{AUTH}|sensor_01|@=39.74,-104.99@1694567890000[temp:=32@=39.75,-105.00@1694567891000;humidity:=65]");
   let frame = parse_uplink(&input).unwrap();
   let body = match frame.push_body.unwrap() {
     PushBody::Structured(s) => s,
@@ -386,8 +385,7 @@ fn revision_d_ack_with_location_suffix() {
 /// §13 Size comparison example (Revision D)
 #[test]
 fn revision_d_size_comparison() {
-  let input = format!(
-    "PUSH|{AUTH}|sensor_01|@1694567890000^batch_42[temperature:=32#F@=39.74,-104.99{{source=dht22}}]"
-  );
+  let input =
+    format!("PUSH|{AUTH}|sensor_01|@1694567890000^batch_42[temperature:=32#F@=39.74,-104.99{{source=dht22}}]");
   roundtrip(&input);
 }
