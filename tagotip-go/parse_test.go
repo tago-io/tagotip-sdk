@@ -810,3 +810,127 @@ func TestSpec11_12(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// =========================================================================
+// Revision D — Location Suffix
+// =========================================================================
+
+func TestRevisionD_LocationSuffix(t *testing.T) {
+	frame, err := ParseUplink("PUSH|" + testAuth + "|dev1|[speed:=10#km/h@=39.74,-104.99,305]")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sb := frame.PushBody.Structured
+	v := sb.Variables[0]
+	if v.Operator != OperatorNumber {
+		t.Errorf("expected number operator, got %d", v.Operator)
+	}
+	if v.Unit == nil || *v.Unit != "km/h" {
+		t.Errorf("expected unit km/h")
+	}
+	if v.Location == nil {
+		t.Fatal("expected location suffix")
+	}
+	if v.Location.Lat != "39.74" {
+		t.Errorf("expected lat 39.74, got %s", v.Location.Lat)
+	}
+	if v.Location.Lng != "-104.99" {
+		t.Errorf("expected lng -104.99, got %s", v.Location.Lng)
+	}
+	if v.Location.Alt == nil || *v.Location.Alt != "305" {
+		t.Errorf("expected alt 305")
+	}
+}
+
+func TestRevisionD_LocationSuffixNoUnit(t *testing.T) {
+	frame, err := ParseUplink("PUSH|" + testAuth + "|dev1|[speed:=10@=39.74,-104.99]")
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := frame.PushBody.Structured.Variables[0]
+	if v.Unit != nil {
+		t.Errorf("expected no unit")
+	}
+	if v.Location == nil {
+		t.Fatal("expected location suffix")
+	}
+	if v.Location.Lat != "39.74" {
+		t.Errorf("expected lat 39.74, got %s", v.Location.Lat)
+	}
+	if v.Location.Alt != nil {
+		t.Errorf("expected no alt")
+	}
+}
+
+func TestRevisionD_BodyLevelLocation(t *testing.T) {
+	frame, err := ParseUplink("PUSH|" + testAuth + "|dev1|@=39.74,-104.99[temp:=32]")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sb := frame.PushBody.Structured
+	if sb.Location == nil {
+		t.Fatal("expected body-level location")
+	}
+	if sb.Location.Lat != "39.74" {
+		t.Errorf("expected lat 39.74, got %s", sb.Location.Lat)
+	}
+	if sb.Location.Lng != "-104.99" {
+		t.Errorf("expected lng -104.99, got %s", sb.Location.Lng)
+	}
+	if sb.Timestamp != nil {
+		t.Errorf("expected no timestamp")
+	}
+}
+
+func TestRevisionD_BodyLocationWithTimestamp(t *testing.T) {
+	frame, err := ParseUplink("PUSH|" + testAuth + "|sensor_01|@=39.74,-104.99@1694567890000^batch_42{firmware=2.1}[temperature:=32#C;humidity:=65#%]")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sb := frame.PushBody.Structured
+	if sb.Location == nil || sb.Location.Lat != "39.74" {
+		t.Errorf("expected body location lat 39.74")
+	}
+	if sb.Timestamp == nil || *sb.Timestamp != "1694567890000" {
+		t.Errorf("expected timestamp 1694567890000")
+	}
+	if sb.Group == nil || *sb.Group != "batch_42" {
+		t.Errorf("expected group batch_42")
+	}
+}
+
+func TestRevisionD_VariableLocationOverride(t *testing.T) {
+	frame, err := ParseUplink("PUSH|" + testAuth + "|sensor_01|@=39.74,-104.99@1694567890000[temp:=32@=39.75,-105.00@1694567891000;humidity:=65]")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sb := frame.PushBody.Structured
+	if sb.Location == nil || sb.Location.Lat != "39.74" {
+		t.Errorf("expected body location lat 39.74")
+	}
+	if sb.Variables[0].Location == nil || sb.Variables[0].Location.Lat != "39.75" {
+		t.Errorf("expected var[0] location lat 39.75")
+	}
+	if sb.Variables[1].Location != nil {
+		t.Errorf("expected var[1] no location")
+	}
+}
+
+func TestRevisionD_RejectSuffixOnLocationOperator(t *testing.T) {
+	_, err := ParseUplink("PUSH|" + testAuth + "|dev1|[position@=39.74,-104.99@=40.00,-105.00]")
+	assertParseError(t, err, ErrInvalidVariable)
+}
+
+func TestRevisionD_NegativeCoordinates(t *testing.T) {
+	frame, err := ParseUplink("PUSH|" + testAuth + "|dev1|[temp:=20@=-33.87,151.21]")
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := frame.PushBody.Structured.Variables[0]
+	if v.Location == nil {
+		t.Fatal("expected location")
+	}
+	if v.Location.Lat != "-33.87" {
+		t.Errorf("expected lat -33.87, got %s", v.Location.Lat)
+	}
+}

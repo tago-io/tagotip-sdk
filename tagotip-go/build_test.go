@@ -325,3 +325,67 @@ func TestBuildConstructedAck(t *testing.T) {
 		t.Errorf("wrong output: %s", output)
 	}
 }
+
+// =========================================================================
+// Revision D — Location Suffix round-trips
+// =========================================================================
+
+func TestBuildRoundTripLocationSuffix(t *testing.T) {
+	input := "PUSH|" + testAuth + "|dev|[speed:=10#km/h@=39.74,-104.99,305]"
+	frame, err := ParseUplink(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	output, err := BuildUplink(frame)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if output != input {
+		t.Errorf("round-trip mismatch:\n  want: %s\n  got:  %s", input, output)
+	}
+}
+
+func TestBuildRoundTripLocationSuffixNoAlt(t *testing.T) {
+	input := "PUSH|" + testAuth + "|dev|[speed:=10@=39.74,-104.99]"
+	frame, err := ParseUplink(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	output, err := BuildUplink(frame)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if output != input {
+		t.Errorf("round-trip mismatch:\n  want: %s\n  got:  %s", input, output)
+	}
+}
+
+func TestBuildRoundTripBodyLocation(t *testing.T) {
+	input := "PUSH|" + testAuth + "|dev|@=39.74,-104.99[temp:=32]"
+	frame, err := ParseUplink(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	output, err := BuildUplink(frame)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if output != input {
+		t.Errorf("round-trip mismatch:\n  want: %s\n  got:  %s", input, output)
+	}
+}
+
+func TestBuildRoundTripBodyLocationWithTimestamp(t *testing.T) {
+	input := "PUSH|" + testAuth + "|sensor|@=39.74,-104.99@1694567890000^batch{firmware=2.1}[temp:=32#C;humidity:=65#%]"
+	frame, err := ParseUplink(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	output, err := BuildUplink(frame)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if output != input {
+		t.Errorf("round-trip mismatch:\n  want: %s\n  got:  %s", input, output)
+	}
+}
