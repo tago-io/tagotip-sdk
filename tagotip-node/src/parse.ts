@@ -323,25 +323,25 @@ function parseLocation(s: string, pos: number): Value {
   return { type: "location", value: { lat, lng } };
 }
 
-function parseLocationSuffix(s: string, pos: number): LocationValue {
+function parseLocationCoords(s: string, pos: number, errKind: ParseErrorKind): LocationValue {
   let commaCount = 0;
   for (let i = 0; i < s.length; i++) {
     if (s[i] === ",") commaCount++;
   }
-  if (commaCount > 2) fail("invalid_variable", pos);
+  if (commaCount > 2) fail(errKind, pos);
 
   const parts = s.split(",");
   const lat = parts[0];
   const lng = parts[1];
-  if (lat === undefined || lng === undefined) fail("invalid_variable", pos);
-  if (lat.length === 0 || lng.length === 0) fail("invalid_variable", pos);
+  if (lat === undefined || lng === undefined) fail(errKind, pos);
+  if (lat.length === 0 || lng.length === 0) fail(errKind, pos);
 
   validateNumber(lat, pos);
   validateNumber(lng, pos);
 
   const altStr = parts[2];
   if (altStr !== undefined) {
-    if (altStr.length === 0) fail("invalid_variable", pos);
+    if (altStr.length === 0) fail(errKind, pos);
     validateNumber(altStr, pos);
     return { lat, lng, alt: altStr };
   }
@@ -393,7 +393,7 @@ function parseVariable(s: string, basePos: number): Variable {
       const start = pos;
       pos = scanUntilAny(s, pos, "@^{");
       const locStr = s.slice(start, pos);
-      location = parseLocationSuffix(locStr, basePos + start);
+      location = parseLocationCoords(locStr, basePos + start, "invalid_variable");
     }
   }
 
@@ -503,7 +503,7 @@ function parseBodyModifiers(s: string, basePos: number): BodyModifiers {
         const start = pos;
         pos = scanUntilAny(s, pos, "@^{");
         const locStr = s.slice(start, pos);
-        location = parseLocationSuffix(locStr, basePos + start);
+        location = parseLocationCoords(locStr, basePos + start, "invalid_modifier");
         phase = 1;
       } else {
         // @ timestamp
