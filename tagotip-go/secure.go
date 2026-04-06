@@ -22,11 +22,11 @@ const (
 	maxInnerFrameSize  = 16_384
 	reservedFlagsValue = 0x41
 
-	flagsCipherMask  = 0b1110_0000
-	flagsCipherShift = 5
-	flagsVersionMask = 0b0001_1000
+	flagsCipherMask   = 0b1110_0000
+	flagsCipherShift  = 5
+	flagsVersionMask  = 0b0001_1000
 	flagsVersionShift = 3
-	flagsMethodMask  = 0b0000_0111
+	flagsMethodMask   = 0b0000_0111
 )
 
 // CipherSuite represents the AEAD cipher suite.

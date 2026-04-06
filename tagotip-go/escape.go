@@ -4,18 +4,18 @@ import "strings"
 
 // escapeMap maps escape characters to their replacement.
 var escapeMap = map[byte]byte{
-	'|': '|',
-	'[': '[',
-	']': ']',
-	';': ';',
-	',': ',',
-	'{': '{',
-	'}': '}',
-	'#': '#',
-	'@': '@',
-	'^': '^',
+	'|':  '|',
+	'[':  '[',
+	']':  ']',
+	';':  ';',
+	',':  ',',
+	'{':  '{',
+	'}':  '}',
+	'#':  '#',
+	'@':  '@',
+	'^':  '^',
 	'\\': '\\',
-	'n': '\n',
+	'n':  '\n',
 }
 
 // structuralChars is the set of characters that need escaping.

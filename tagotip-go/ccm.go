@@ -9,8 +9,8 @@ import (
 // Parameters: tag size = 8 bytes, L = 2, nonce = 13 bytes.
 
 const (
-	ccmL     = 2      // length field size in bytes
-	ccmBlock = 16     // AES block size
+	ccmL     = 2  // length field size in bytes
+	ccmBlock = 16 // AES block size
 )
 
 // ccmSeal encrypts plaintext and produces ciphertext || tag.
@@ -92,7 +92,7 @@ func ccmCBCMAC(block cipher.Block, nonce, aad, plaintext []byte) [ccmTagSize]byt
 		flags |= 1 << 6 // Adata flag
 	}
 	flags |= byte((ccmTagSize/2 - 1) << 3) // t field: (tagSize-2)/2
-	flags |= byte(ccmL - 1)                  // q field: L-1
+	flags |= byte(ccmL - 1)                // q field: L-1
 	b0[0] = flags
 	copy(b0[1:], nonce)
 

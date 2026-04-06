@@ -386,25 +386,15 @@ func parseLocation(s string, pos int) (Value, error) {
 	return Value{Type: OperatorLocation, Location: loc}, nil
 }
 
-func parseLocationSuffix(s string, pos int) (*LocationValue, error) {
-	commaCount := 0
-	for i := 0; i < len(s); i++ {
-		if s[i] == ',' {
-			commaCount++
-		}
-	}
-	if commaCount > 2 {
-		return nil, fail(ErrInvalidVariable, pos)
-	}
-
+func parseLocationCoords(s string, pos int, errKind ParseErrorKind) (*LocationValue, error) {
 	parts := strings.SplitN(s, ",", 4)
 	if len(parts) < 2 {
-		return nil, fail(ErrInvalidVariable, pos)
+		return nil, fail(errKind, pos)
 	}
 	lat := parts[0]
 	lng := parts[1]
 	if len(lat) == 0 || len(lng) == 0 {
-		return nil, fail(ErrInvalidVariable, pos)
+		return nil, fail(errKind, pos)
 	}
 
 	if err := validateNumber(lat, pos); err != nil {
@@ -418,7 +408,7 @@ func parseLocationSuffix(s string, pos int) (*LocationValue, error) {
 	if len(parts) > 2 {
 		alt := parts[2]
 		if len(alt) == 0 {
-			return nil, fail(ErrInvalidVariable, pos)
+			return nil, fail(errKind, pos)
 		}
 		if err := validateNumber(alt, pos); err != nil {
 			return nil, err
@@ -426,47 +416,8 @@ func parseLocationSuffix(s string, pos int) (*LocationValue, error) {
 		loc.Alt = &alt
 	}
 
-	return loc, nil
-}
-
-func parseBodyLocationSuffix(s string, pos int) (*LocationValue, error) {
-	commaCount := 0
-	for i := 0; i < len(s); i++ {
-		if s[i] == ',' {
-			commaCount++
-		}
-	}
-	if commaCount > 2 {
-		return nil, fail(ErrInvalidModifier, pos)
-	}
-
-	parts := strings.SplitN(s, ",", 4)
-	if len(parts) < 2 {
-		return nil, fail(ErrInvalidModifier, pos)
-	}
-	lat := parts[0]
-	lng := parts[1]
-	if len(lat) == 0 || len(lng) == 0 {
-		return nil, fail(ErrInvalidModifier, pos)
-	}
-
-	if err := validateNumber(lat, pos); err != nil {
-		return nil, err
-	}
-	if err := validateNumber(lng, pos); err != nil {
-		return nil, err
-	}
-
-	loc := &LocationValue{Lat: lat, Lng: lng}
-	if len(parts) > 2 {
-		alt := parts[2]
-		if len(alt) == 0 {
-			return nil, fail(ErrInvalidModifier, pos)
-		}
-		if err := validateNumber(alt, pos); err != nil {
-			return nil, err
-		}
-		loc.Alt = &alt
+	if len(parts) > 3 {
+		return nil, fail(errKind, pos)
 	}
 
 	return loc, nil
@@ -529,7 +480,7 @@ func parseVariable(s string, basePos int) (Variable, error) {
 			start := pos
 			pos = scanUntilAny(s, pos, "@^{")
 			locStr := s[start:pos]
-			loc, err := parseLocationSuffix(locStr, basePos+start)
+			loc, err := parseLocationCoords(locStr, basePos+start, ErrInvalidVariable)
 			if err != nil {
 				return Variable{}, err
 			}
@@ -671,7 +622,7 @@ func parseBodyModifiers(s string, basePos int) (bodyModifiers, error) {
 				start := pos
 				pos = scanUntilAny(s, pos, "@^{")
 				locStr := s[start:pos]
-				loc, err := parseBodyLocationSuffix(locStr, basePos+start)
+				loc, err := parseLocationCoords(locStr, basePos+start, ErrInvalidModifier)
 				if err != nil {
 					return bodyModifiers{}, err
 				}

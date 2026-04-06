@@ -564,17 +564,17 @@ func TestParseAckErr(t *testing.T) {
 
 func TestParseAckAllErrorCodes(t *testing.T) {
 	codes := map[string]ErrorCode{
-		"invalid_token":        ErrorCodeInvalidToken,
-		"invalid_method":       ErrorCodeInvalidMethod,
-		"invalid_payload":      ErrorCodeInvalidPayload,
-		"invalid_seq":          ErrorCodeInvalidSeq,
-		"device_not_found":     ErrorCodeDeviceNotFound,
-		"variable_not_found":   ErrorCodeVariableNotFound,
-		"rate_limited":         ErrorCodeRateLimited,
-		"auth_failed":          ErrorCodeAuthFailed,
-		"unsupported_version":  ErrorCodeUnsupportedVersion,
-		"payload_too_large":    ErrorCodePayloadTooLarge,
-		"server_error":         ErrorCodeServerError,
+		"invalid_token":       ErrorCodeInvalidToken,
+		"invalid_method":      ErrorCodeInvalidMethod,
+		"invalid_payload":     ErrorCodeInvalidPayload,
+		"invalid_seq":         ErrorCodeInvalidSeq,
+		"device_not_found":    ErrorCodeDeviceNotFound,
+		"variable_not_found":  ErrorCodeVariableNotFound,
+		"rate_limited":        ErrorCodeRateLimited,
+		"auth_failed":         ErrorCodeAuthFailed,
+		"unsupported_version": ErrorCodeUnsupportedVersion,
+		"payload_too_large":   ErrorCodePayloadTooLarge,
+		"server_error":        ErrorCodeServerError,
 	}
 	for text, expected := range codes {
 		frame, err := ParseAck("ACK|ERR|" + text)
