@@ -899,3 +899,130 @@ describe("seq edge cases", () => {
     );
   });
 });
+
+// =========================================================================
+// Revision D — Location Suffix
+// =========================================================================
+
+describe("revision D — location suffix", () => {
+  it("variable-level location suffix with unit", () => {
+    const frame = parseUplink(
+      `PUSH|${AUTH}|dev1|[speed:=10#km/h@=39.74,-104.99,305]`
+    );
+    if (frame.pushBody?.type === "structured") {
+      const v = frame.pushBody.body.variables[0];
+      assert.equal(v.operator, Operator.Number);
+      assert.equal(v.unit, "km/h");
+      assert.ok(v.location);
+      assert.equal(v.location!.lat, "39.74");
+      assert.equal(v.location!.lng, "-104.99");
+      assert.equal(v.location!.alt, "305");
+    }
+    roundtrip(`PUSH|${AUTH}|dev1|[speed:=10#km/h@=39.74,-104.99,305]`);
+  });
+
+  it("variable-level location suffix without unit", () => {
+    const frame = parseUplink(
+      `PUSH|${AUTH}|dev1|[speed:=10@=39.74,-104.99]`
+    );
+    if (frame.pushBody?.type === "structured") {
+      const v = frame.pushBody.body.variables[0];
+      assert.equal(v.unit, undefined);
+      assert.ok(v.location);
+      assert.equal(v.location!.lat, "39.74");
+      assert.equal(v.location!.lng, "-104.99");
+      assert.equal(v.location!.alt, undefined);
+    }
+    roundtrip(`PUSH|${AUTH}|dev1|[speed:=10@=39.74,-104.99]`);
+  });
+
+  it("all suffixes combined", () => {
+    const input = `PUSH|${AUTH}|dev1|[temperature:=32.5#C@=39.74,-104.99@1694567890000^reading_001{source=dht22,quality=high}]`;
+    const frame = parseUplink(input);
+    if (frame.pushBody?.type === "structured") {
+      const v = frame.pushBody.body.variables[0];
+      assert.equal(v.unit, "C");
+      assert.equal(v.location!.lat, "39.74");
+      assert.equal(v.location!.lng, "-104.99");
+      assert.equal(v.timestamp, "1694567890000");
+      assert.equal(v.group, "reading_001");
+    }
+    roundtrip(input);
+  });
+
+  it("body-level location", () => {
+    const frame = parseUplink(
+      `PUSH|${AUTH}|dev1|@=39.74,-104.99[temp:=32]`
+    );
+    if (frame.pushBody?.type === "structured") {
+      const body = frame.pushBody.body;
+      assert.ok(body.location);
+      assert.equal(body.location!.lat, "39.74");
+      assert.equal(body.location!.lng, "-104.99");
+      assert.equal(body.timestamp, undefined);
+    }
+    roundtrip(`PUSH|${AUTH}|dev1|@=39.74,-104.99[temp:=32]`);
+  });
+
+  it("body-level location with timestamp and group", () => {
+    const input = `PUSH|${AUTH}|sensor_01|@=39.74,-104.99@1694567890000^batch_42{firmware=2.1}[temperature:=32#C;humidity:=65#%]`;
+    const frame = parseUplink(input);
+    if (frame.pushBody?.type === "structured") {
+      const body = frame.pushBody.body;
+      assert.equal(body.location!.lat, "39.74");
+      assert.equal(body.location!.lng, "-104.99");
+      assert.equal(body.timestamp, "1694567890000");
+      assert.equal(body.group, "batch_42");
+    }
+    roundtrip(input);
+  });
+
+  it("variable-level location overrides body-level", () => {
+    const input = `PUSH|${AUTH}|sensor_01|@=39.74,-104.99@1694567890000[temp:=32@=39.75,-105.00@1694567891000;humidity:=65]`;
+    const frame = parseUplink(input);
+    if (frame.pushBody?.type === "structured") {
+      const body = frame.pushBody.body;
+      assert.equal(body.location!.lat, "39.74");
+      assert.equal(body.variables[0].location!.lat, "39.75");
+      assert.equal(body.variables[1].location, undefined);
+    }
+    roundtrip(input);
+  });
+
+  it("rejects @= suffix on @= operator variable", () => {
+    assert.throws(
+      () =>
+        parseUplink(
+          `PUSH|${AUTH}|dev1|[position@=39.74,-104.99@=40.00,-105.00]`
+        ),
+      TagotipError
+    );
+  });
+
+  it("body-level malformed location throws invalid_modifier", () => {
+    try {
+      parseUplink(`PUSH|${AUTH}|dev1|@=abc[temp:=32]`);
+      assert.fail("expected error");
+    } catch (e) {
+      assert.ok(e instanceof TagotipError);
+      assert.equal((e as TagotipError).kind, "invalid_modifier");
+    }
+  });
+
+  it("ACK with location suffix roundtrip", () => {
+    const input = "ACK|OK|[speed:=10#km/h@=39.74,-104.99@1694567890000]";
+    const parsed = parseAck(input);
+    const output = buildAck(parsed);
+    assert.equal(output, input);
+  });
+
+  it("negative coordinates", () => {
+    const input = `PUSH|${AUTH}|dev1|[temp:=20@=-33.87,151.21]`;
+    const frame = parseUplink(input);
+    if (frame.pushBody?.type === "structured") {
+      assert.equal(frame.pushBody.body.variables[0].location!.lat, "-33.87");
+      assert.equal(frame.pushBody.body.variables[0].location!.lng, "151.21");
+    }
+    roundtrip(input);
+  });
+});
