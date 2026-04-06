@@ -53,13 +53,14 @@ These types exist across all language bindings:
 - **Method**: `Push`, `Pull`, `Ping`
 - **Operator**: `Number` (`:=`), `String` (`=`), `Boolean` (`?=`), `Location` (`@=`)
 - **Value**: `Number(str)`, `String(str)`, `Boolean(bool)`, `Location{lat,lng,alt?}`
-- **Variable**: `name`, `operator`, `value`, `unit?`, `timestamp?`, `group?`, `meta?`
+- **Variable**: `name`, `operator`, `value`, `unit?`, `location?`, `timestamp?`, `group?`, `meta?`
 - **MetaPair**: `key`, `value`
 - **UplinkFrame**: `method`, `seq?`, `auth`, `serial`, `push_body?`, `pull_body?`
 - **HeadlessFrame**: `serial`, `push_body?`, `pull_body?` (for TagoTiP/S inner frames)
 - **AckFrame**: `seq?`, `status`, `detail?`
 - **AckStatus**: `Ok`, `Pong`, `Cmd`, `Err`
 - **AckDetail**: `Count(u32)`, `Variables(str)`, `Command(str)`, `Error{code,text}`, `Raw(str)`
+- **StructuredBody**: `location?`, `group?`, `timestamp?`, `meta?`, `variables`
 
 ## Constants
 

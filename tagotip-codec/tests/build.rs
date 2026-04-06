@@ -20,6 +20,7 @@ fn build_simple_push() {
       operator: Operator::Number,
       value: Value::Number("32"),
       unit: None,
+      location: None,
       timestamp: None,
       group: None,
       meta: None,
@@ -32,6 +33,7 @@ fn build_simple_push() {
     auth: AUTH,
     serial: "sensor_01",
     push_body: Some(PushBody::Structured(StructuredBody {
+      location: None,
       group: None,
       timestamp: None,
       body_meta: None,
@@ -54,6 +56,7 @@ fn build_push_with_seq() {
       operator: Operator::Number,
       value: Value::Number("25"),
       unit: None,
+      location: None,
       timestamp: None,
       group: None,
       meta: None,
@@ -66,6 +69,7 @@ fn build_push_with_seq() {
     auth: AUTH,
     serial: "sensor_01",
     push_body: Some(PushBody::Structured(StructuredBody {
+      location: None,
       group: None,
       timestamp: None,
       body_meta: None,
@@ -176,6 +180,7 @@ fn build_headless_push() {
       operator: Operator::Number,
       value: Value::Number("32"),
       unit: None,
+      location: None,
       timestamp: None,
       group: None,
       meta: None,
@@ -185,6 +190,7 @@ fn build_headless_push() {
   let headless = HeadlessFrame {
     serial: "sensor_01",
     push_body: Some(PushBody::Structured(StructuredBody {
+      location: None,
       group: None,
       timestamp: None,
       body_meta: None,

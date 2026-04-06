@@ -102,6 +102,7 @@ fn test_inner_frame_bytes() {
     operator: Operator::Number,
     value: Value::Number("32"),
     unit: None,
+    location: None,
     timestamp: None,
     group: None,
     meta: None,
@@ -110,6 +111,7 @@ fn test_inner_frame_bytes() {
   let frame = HeadlessFrame {
     serial: SERIAL,
     push_body: Some(PushBody::Structured(StructuredBody {
+      location: None,
       group: None,
       timestamp: None,
       body_meta: None,
@@ -134,6 +136,7 @@ fn test_seal_produces_spec_envelope() {
     operator: Operator::Number,
     value: Value::Number("32"),
     unit: None,
+    location: None,
     timestamp: None,
     group: None,
     meta: None,
@@ -142,6 +145,7 @@ fn test_seal_produces_spec_envelope() {
   let frame = HeadlessFrame {
     serial: SERIAL,
     push_body: Some(PushBody::Structured(StructuredBody {
+      location: None,
       group: None,
       timestamp: None,
       body_meta: None,
@@ -222,6 +226,7 @@ fn test_seal_open_with_derived_key() {
     operator: Operator::Number,
     value: Value::Number("32"),
     unit: None,
+    location: None,
     timestamp: None,
     group: None,
     meta: None,
@@ -230,6 +235,7 @@ fn test_seal_open_with_derived_key() {
   let frame = HeadlessFrame {
     serial: SERIAL,
     push_body: Some(PushBody::Structured(StructuredBody {
+      location: None,
       group: None,
       timestamp: None,
       body_meta: None,

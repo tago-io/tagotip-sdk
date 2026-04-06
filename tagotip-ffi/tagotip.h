@@ -147,6 +147,9 @@ typedef struct {
     TagotipOperator operator_;
     TagotipValue value;
     TagotipStr unit;
+    TagotipStr loc_lat;        /* Location suffix latitude (len=0 if absent) */
+    TagotipStr loc_lng;        /* Location suffix longitude */
+    TagotipStr loc_alt;        /* Location suffix altitude (optional, len=0 if absent) */
     TagotipStr timestamp;
     TagotipStr group;
     uint16_t meta_start;
@@ -169,6 +172,9 @@ typedef struct {
     TagotipPushBodyTag push_body_tag;
 
     /* Structured push body */
+    TagotipStr body_loc_lat;
+    TagotipStr body_loc_lng;
+    TagotipStr body_loc_alt;
     TagotipStr body_group;
     TagotipStr body_timestamp;
     uint16_t body_meta_start;

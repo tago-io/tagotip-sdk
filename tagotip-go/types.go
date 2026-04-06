@@ -81,14 +81,16 @@ type Variable struct {
 	Name      string
 	Operator  Operator
 	Value     Value
-	Unit      *string // nil if not present
-	Timestamp *string // nil if not present
-	Group     *string // nil if not present
+	Unit      *string        // nil if not present
+	Location  *LocationValue // nil if not present (@= suffix)
+	Timestamp *string        // nil if not present
+	Group     *string        // nil if not present
 	Meta      []MetaPair
 }
 
 // StructuredBody represents a structured PUSH body.
 type StructuredBody struct {
+	Location  *LocationValue // nil if not present (@= body-level)
 	Group     *string
 	Timestamp *string
 	Meta      []MetaPair

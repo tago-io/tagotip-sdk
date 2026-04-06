@@ -62,6 +62,17 @@ func writeVariable(v Variable) string {
 		b.WriteByte('#')
 		b.WriteString(*v.Unit)
 	}
+	if v.Location != nil {
+		loc := v.Location
+		b.WriteString("@=")
+		b.WriteString(loc.Lat)
+		b.WriteByte(',')
+		b.WriteString(loc.Lng)
+		if loc.Alt != nil {
+			b.WriteByte(',')
+			b.WriteString(*loc.Alt)
+		}
+	}
 	if v.Timestamp != nil {
 		b.WriteByte('@')
 		b.WriteString(*v.Timestamp)
@@ -92,6 +103,17 @@ func writePushBody(body *PushBody) string {
 	}
 
 	var b strings.Builder
+	if sb.Location != nil {
+		loc := sb.Location
+		b.WriteString("@=")
+		b.WriteString(loc.Lat)
+		b.WriteByte(',')
+		b.WriteString(loc.Lng)
+		if loc.Alt != nil {
+			b.WriteByte(',')
+			b.WriteString(*loc.Alt)
+		}
+	}
 	if sb.Timestamp != nil {
 		b.WriteByte('@')
 		b.WriteString(*sb.Timestamp)

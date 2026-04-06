@@ -92,6 +92,7 @@ class Variable:
     operator: Operator
     value: Value
     unit: Optional[str] = None
+    location: Optional[LocationValue] = None
     timestamp: Optional[str] = None
     group: Optional[str] = None
     meta: list[MetaPair] = field(default_factory=list)
@@ -102,6 +103,7 @@ class StructuredBody:
     """Structured PUSH body."""
 
     variables: list[Variable] = field(default_factory=list)
+    location: Optional[LocationValue] = None
     group: Optional[str] = None
     timestamp: Optional[str] = None
     meta: list[MetaPair] = field(default_factory=list)

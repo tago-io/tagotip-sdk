@@ -60,16 +60,35 @@ fn spec_11_3_negative_number() {
   roundtrip(&input);
 }
 
-/// §11.4 Location and Altitude
+/// §11.4 Location as value (@= operator)
 #[test]
 fn spec_11_4_location_altitude() {
-  let input = format!("PUSH|{AUTH}|drone_07|[altitude:=305#m;position@=39.74,-104.99,305]");
+  let input = format!("PUSH|{AUTH}|drone_07|[position@=39.74,-104.99,305]");
   let frame = parse_uplink(&input).unwrap();
   let body = match frame.push_body.unwrap() {
     PushBody::Structured(s) => s,
     _ => panic!("expected structured"),
   };
-  assert_eq!(body.variables[1].operator, Operator::Location);
+  assert_eq!(body.variables[0].operator, Operator::Location);
+  roundtrip(&input);
+}
+
+/// §11.4 Location suffix on non-location value
+#[test]
+fn spec_11_4_location_suffix() {
+  let input = format!("PUSH|{AUTH}|drone_07|[speed:=10#km/h@=39.74,-104.99,305]");
+  let frame = parse_uplink(&input).unwrap();
+  let body = match frame.push_body.unwrap() {
+    PushBody::Structured(s) => s,
+    _ => panic!("expected structured"),
+  };
+  let var = &body.variables[0];
+  assert_eq!(var.operator, Operator::Number);
+  assert_eq!(var.unit, Some("km/h"));
+  let loc = var.location.unwrap();
+  assert_eq!(loc.lat, "39.74");
+  assert_eq!(loc.lng, "-104.99");
+  assert_eq!(loc.alt, Some("305"));
   roundtrip(&input);
 }
 
@@ -87,16 +106,20 @@ fn spec_11_5_metadata() {
   roundtrip(&input);
 }
 
-/// §11.6 Body-Level Defaults
+/// §11.6 Body-Level Defaults (with body-level location)
 #[test]
 fn spec_11_6_body_defaults() {
-  let input =
-    format!("PUSH|{AUTH}|sensor_01|@1694567890000^batch_42{{firmware=2.1}}[temperature:=32#C;humidity:=65#%]");
+  let input = format!(
+    "PUSH|{AUTH}|sensor_01|@=39.74,-104.99@1694567890000^batch_42{{firmware=2.1}}[temperature:=32#C;humidity:=65#%]"
+  );
   let frame = parse_uplink(&input).unwrap();
   let body = match frame.push_body.unwrap() {
     PushBody::Structured(s) => s,
     _ => panic!("expected structured"),
   };
+  let loc = body.location.unwrap();
+  assert_eq!(loc.lat, "39.74");
+  assert_eq!(loc.lng, "-104.99");
   assert_eq!(body.group, Some("batch_42"));
   assert_eq!(body.timestamp, Some("1694567890000"));
   roundtrip(&input);
@@ -252,4 +275,117 @@ fn spec_ack_examples() {
     let output = core::str::from_utf8(&buf[..n]).unwrap();
     assert_eq!(output, input, "ACK roundtrip failed for: {input}");
   }
+}
+
+// =========================================================================
+// Revision D — Location Suffix Tests
+// =========================================================================
+
+/// Location suffix with all other suffixes
+#[test]
+fn revision_d_all_suffixes() {
+  let input = format!(
+    "PUSH|{AUTH}|dev1|[temperature:=32.5#C@=39.74,-104.99@1694567890000^reading_001{{source=dht22,quality=high}}]"
+  );
+  let frame = parse_uplink(&input).unwrap();
+  let body = match frame.push_body.unwrap() {
+    PushBody::Structured(s) => s,
+    _ => panic!("expected structured"),
+  };
+  let var = &body.variables[0];
+  assert_eq!(var.unit, Some("C"));
+  let loc = var.location.unwrap();
+  assert_eq!(loc.lat, "39.74");
+  assert_eq!(loc.lng, "-104.99");
+  assert_eq!(var.timestamp, Some("1694567890000"));
+  assert_eq!(var.group, Some("reading_001"));
+  roundtrip(&input);
+}
+
+/// Location suffix without unit
+#[test]
+fn revision_d_location_suffix_no_unit() {
+  let input = format!("PUSH|{AUTH}|dev1|[speed:=10@=39.74,-104.99]");
+  let frame = parse_uplink(&input).unwrap();
+  let body = match frame.push_body.unwrap() {
+    PushBody::Structured(s) => s,
+    _ => panic!("expected structured"),
+  };
+  let var = &body.variables[0];
+  assert_eq!(var.unit, None);
+  let loc = var.location.unwrap();
+  assert_eq!(loc.lat, "39.74");
+  assert_eq!(loc.lng, "-104.99");
+  assert_eq!(loc.alt, None);
+  roundtrip(&input);
+}
+
+/// Body-level location cascading
+#[test]
+fn revision_d_body_level_location() {
+  let input = format!("PUSH|{AUTH}|sensor_01|@=39.74,-104.99@1694567890000[temp:=32#C;humidity:=65#%]");
+  roundtrip(&input);
+}
+
+/// Variable-level location override
+#[test]
+fn revision_d_variable_location_override() {
+  let input =
+    format!("PUSH|{AUTH}|sensor_01|@=39.74,-104.99@1694567890000[temp:=32@=39.75,-105.00@1694567891000;humidity:=65]");
+  let frame = parse_uplink(&input).unwrap();
+  let body = match frame.push_body.unwrap() {
+    PushBody::Structured(s) => s,
+    _ => panic!("expected structured"),
+  };
+  let body_loc = body.location.unwrap();
+  assert_eq!(body_loc.lat, "39.74");
+  let temp_loc = body.variables[0].location.unwrap();
+  assert_eq!(temp_loc.lat, "39.75");
+  assert_eq!(body.variables[1].location, None);
+  roundtrip(&input);
+}
+
+/// @= suffix MUST NOT appear with @= operator
+#[test]
+fn revision_d_location_suffix_with_location_operator_rejected() {
+  let input = format!("PUSH|{AUTH}|dev1|[position@=39.74,-104.99@=40.00,-105.00]");
+  assert!(parse_uplink(&input).is_err());
+}
+
+/// Body-level @= only (no timestamp)
+#[test]
+fn revision_d_body_location_only() {
+  let input = format!("PUSH|{AUTH}|dev1|@=39.74,-104.99[temp:=32]");
+  let frame = parse_uplink(&input).unwrap();
+  let body = match frame.push_body.unwrap() {
+    PushBody::Structured(s) => s,
+    _ => panic!("expected structured"),
+  };
+  let loc = body.location.unwrap();
+  assert_eq!(loc.lat, "39.74");
+  assert_eq!(loc.lng, "-104.99");
+  assert_eq!(body.timestamp, None);
+  roundtrip(&input);
+}
+
+/// PULL response with location suffix
+#[test]
+fn revision_d_ack_with_location_suffix() {
+  use tagotip_codec::build::build_ack;
+  use tagotip_codec::parse::parse_ack;
+
+  let input = "ACK|OK|[speed:=10#km/h@=39.74,-104.99@1694567890000]";
+  let parsed = parse_ack(input).unwrap();
+  let mut buf = [0u8; 4096];
+  let n = build_ack(&parsed, &mut buf).unwrap();
+  let output = core::str::from_utf8(&buf[..n]).unwrap();
+  assert_eq!(output, input);
+}
+
+/// §13 Size comparison example (Revision D)
+#[test]
+fn revision_d_size_comparison() {
+  let input =
+    format!("PUSH|{AUTH}|sensor_01|@1694567890000^batch_42[temperature:=32#F@=39.74,-104.99{{source=dht22}}]");
+  roundtrip(&input);
 }
