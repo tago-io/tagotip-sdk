@@ -26,7 +26,7 @@ std = ["tagotip-codec/std", "sha2/std", "hmac/std"]
 tagotip-codec = { version = "0.1.1", path = "../tagotip-codec" }
 sha2 = { version = "0.10", default-features = false }
 hmac = { version = "0.12", default-features = false }
-aes = { version = "0.8", default-features = false, optional = true }
+aes = { version = "0.9", default-features = false, optional = true }
 ccm = { version = "0.5", default-features = false, features = ["alloc"], optional = true }
 aes-gcm = { version = "0.10", default-features = false, features = ["alloc", "aes"], optional = true }
 chacha20poly1305 = { version = "0.10", default-features = false, features = ["alloc"], optional = true }
