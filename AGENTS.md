@@ -196,16 +196,9 @@ just arduino-crypto-test
 
 - `tagotip-codec` and `tagotip-secure` must always share the same version number (managed via `workspace.package.version` in the root `Cargo.toml`).
 
-## README Convention
+## README and repo files
 
-All README.md files must include the TagoIO logo header at the top, before the title:
-
-```html
-<br/>
-<p align="center">
-  <img src="https://assets.tago.io/tagoio/tagoio.png" width="250px" alt="TagoIO"></img>
-</p>
-```
+Follow `tagoio:repo-standards` for README logo headers (200px, `assets.tago.io`), section packs, LICENSE.md, and footer. Do not duplicate those rules here.
 
 ## Coding Conventions
 
